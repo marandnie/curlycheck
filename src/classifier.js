@@ -1,7 +1,7 @@
 // Motor de clasificación: parser INCI + lookup + veredicto.
 // Port de Python (curly_classifier/classifier.py) a JS.
 
-import { INGREDIENTS, RULESETS } from "./ingredients.js";
+import { CATEGORIES, INGREDIENTS, RULESETS } from "./ingredients.js";
 
 export const VERDICT = {
   APTO: "APTO",
@@ -9,49 +9,38 @@ export const VERDICT = {
   VERIFICAR: "VERIFICAR",
 };
 
-// ---------------------------------------------------------------------------
-// Normalización
-// ---------------------------------------------------------------------------
 export function normalizeToken(s) {
   if (!s) return "";
   return s
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "") // quitar diacríticos
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
-    .replace(/[/·]/g, " ")
+    .replace(/[\/·]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-// ---------------------------------------------------------------------------
-// Index global: aliasNormalizado -> ingrediente
-// ---------------------------------------------------------------------------
 const INDEX = (() => {
   const m = new Map();
   for (const ing of INGREDIENTS) {
     const keys = [ing.name, ...(ing.aliases || [])];
-    for (const k of keys) {
-      m.set(normalizeToken(k), ing);
-    }
+    for (const k of keys) m.set(normalizeToken(k), ing);
   }
   return m;
 })();
 
-// ---------------------------------------------------------------------------
-// Parser INCI
-// ---------------------------------------------------------------------------
 export function parseInci(text) {
   if (!text) return [];
-  // quitar prefijos comunes
   text = text.replace(/^\s*(ingredients?|ingredientes|inci)\s*[:.\-]?\s*/i, "");
-  // unificar separadores
   text = text.replace(/\n/g, ",").replace(/;/g, ",").replace(/·/g, ",");
-  const tokens = text.split(",").map((t) => t.replace(/[ ."\t]+$/, "").replace(/^[ "\t]+/, ""));
+  const tokens = text.split(",").map(function(t) {
+    return t.replace(/[ ."\t]+$/, "").replace(/^[ "\t]+/, "");
+  });
   const cleaned = [];
   for (let t of tokens) {
     if (!t) continue;
     if (t.includes("/")) {
-      const parts = t.split("/").map((p) => p.trim()).filter(Boolean);
+      const parts = t.split("/").map(function(p) { return p.trim(); }).filter(Boolean);
       if (parts.length) t = parts[0];
     }
     cleaned.push(t);
@@ -63,19 +52,16 @@ export function lookupIngredient(token) {
   const norm = normalizeToken(token);
   if (!norm) return null;
   if (INDEX.has(norm)) return INDEX.get(norm);
-  // match parcial
   for (const [key, ing] of INDEX.entries()) {
     if (key.length >= 6 && norm.includes(key)) return ing;
   }
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// Clasificador
-// ---------------------------------------------------------------------------
-export function classify(inciText, rulesetName = "standard") {
+export function classify(inciText, rulesetName) {
+  if (!rulesetName) rulesetName = "standard";
   const rs = RULESETS[rulesetName];
-  if (!rs) throw new Error(`Ruleset desconocido: ${rulesetName}`);
+  if (!rs) throw new Error("Ruleset desconocido: " + rulesetName);
 
   const tokens = parseInci(inciText);
   if (!tokens.length) {
@@ -93,47 +79,92 @@ export function classify(inciText, rulesetName = "standard") {
   const offenders = [];
   const unknown = [];
   let matched = 0;
-
   for (const raw of tokens) {
     const ing = lookupIngredient(raw);
-    if (!ing) {
-      unknown.push(raw);
-      continue;
-    }
+    if (!ing) { unknown.push(raw); continue; }
     matched++;
-    let isForbidden =
-      rs.forbiddenCategories.has(ing.category) || rs.extraForbidden.has(ing.name);
+    let isForbidden = rs.forbiddenCategories.has(ing.category) || rs.extraForbidden.has(ing.name);
     if (rs.extraAllowed.has(ing.name)) isForbidden = false;
     if (isForbidden) {
-      offenders.push({
-        raw,
-        matched: ing,
-        reason: ing.explanation || ing.category,
-      });
+      offenders.push({ raw, matched: ing, reason: ing.explanation || ing.category });
     }
   }
 
   const coverage = tokens.length ? matched / tokens.length : 0;
   const unknownRatio = tokens.length ? unknown.length / tokens.length : 0;
-  let verdict;
-  let notes = "";
-
-  if (offenders.length > 0) {
-    verdict = VERDICT.NO_APTO;
-  } else if (unknownRatio > rs.unknownThreshold) {
+  let verdict, notes = "";
+  if (offenders.length > 0) verdict = VERDICT.NO_APTO;
+  else if (unknownRatio > rs.unknownThreshold) {
     verdict = VERDICT.VERIFICAR;
-    notes = `${unknown.length} de ${tokens.length} ingredientes no reconocidos (${(unknownRatio * 100).toFixed(0)}%).`;
-  } else {
-    verdict = VERDICT.APTO;
-  }
+    notes = unknown.length + " de " + tokens.length + " ingredientes no reconocidos (" +
+      Math.round(unknownRatio * 100) + "%).";
+  } else verdict = VERDICT.APTO;
 
   return {
-    verdict,
-    ruleset: rs.name,
-    offenders,
-    unknown,
-    coverage,
-    totalParsed: tokens.length,
-    notes,
+    verdict, ruleset: rs.name, offenders, unknown, coverage,
+    totalParsed: tokens.length, notes,
   };
+}
+
+// Sub-veredictos por categoría
+const CATEGORY_GROUPS = {
+  sulfates: [CATEGORIES.SULFATE],
+  silicones: [CATEGORIES.SILICONE_INSOLUBLE],
+  alcohols: [CATEGORIES.DRYING_ALCOHOL],
+  minerals: [CATEGORIES.MINERAL_OIL, CATEGORIES.WAX],
+};
+
+export function categorySummary(inciText, rulesetName) {
+  if (!rulesetName) rulesetName = "standard";
+  const rs = RULESETS[rulesetName];
+  if (!rs) throw new Error("Ruleset desconocido: " + rulesetName);
+  const tokens = parseInci(inciText);
+  const empty = {
+    sulfates: { state: "na", matches: [] },
+    silicones: { state: "na", matches: [] },
+    alcohols: { state: "na", matches: [] },
+    minerals: { state: "na", matches: [] },
+  };
+  if (!tokens.length) return empty;
+
+  const byCat = {};
+  const flagged = [];
+  for (const raw of tokens) {
+    const ing = lookupIngredient(raw);
+    if (!ing) continue;
+    if (!byCat[ing.category]) byCat[ing.category] = [];
+    byCat[ing.category].push(ing);
+    if (rs.extraForbidden.has(ing.name)) flagged.push(ing);
+  }
+
+  const summary = {};
+  for (const key of Object.keys(CATEGORY_GROUPS)) {
+    const cats = CATEGORY_GROUPS[key];
+    const matches = [];
+    for (const c of cats) if (byCat[c]) matches.push.apply(matches, byCat[c]);
+    const isRelevant = cats.some(function(c) { return rs.forbiddenCategories.has(c); });
+    if (!isRelevant) {
+      summary[key] = { state: matches.length > 0 ? "clean" : "na", matches: [] };
+      continue;
+    }
+    const filtered = matches.filter(function(m) { return !rs.extraAllowed.has(m.name); });
+    summary[key] = {
+      state: filtered.length > 0 ? "present" : "clean",
+      matches: filtered.map(function(m) { return m.name; }),
+    };
+  }
+
+  for (const ing of flagged) {
+    let target = "sulfates";
+    for (const key of Object.keys(CATEGORY_GROUPS)) {
+      if (CATEGORY_GROUPS[key].includes(ing.category)) { target = key; break; }
+    }
+    if (summary[target].state !== "present") {
+      summary[target] = { state: "present", matches: [ing.name] };
+    } else if (!summary[target].matches.includes(ing.name)) {
+      summary[target].matches.push(ing.name);
+    }
+  }
+
+  return summary;
 }

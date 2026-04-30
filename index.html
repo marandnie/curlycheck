@@ -106,6 +106,8 @@
           <p class="verdict-sub" id="verdict-sub"></p>
         </div>
 
+        <div id="category-chips" class="category-chips" hidden></div>
+
         <!-- Aparece sólo cuando no encontramos INCI: ofrece OCR como fallback -->
         <div id="ocr-fallback" class="ocr-fallback" hidden>
           <p>No tenemos la lista de ingredientes. Sacale una foto a la INCI del envase y la leemos automáticamente.</p>
@@ -125,8 +127,9 @@
         </details>
 
         <div class="actions">
-          <button id="btn-save-shelf" class="btn btn-primary">Guardar en mi estantería</button>
-          <button id="btn-scan-again" class="btn btn-ghost">Escanear otro</button>
+          <button id="btn-save-shelf" class="btn btn-primary">Guardar</button>
+          <button id="btn-share" class="btn">Compartir</button>
+          <button id="btn-scan-again" class="btn btn-ghost">Otro</button>
         </div>
 
         <p class="source-note" id="source-note"></p>

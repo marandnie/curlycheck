@@ -1,7 +1,7 @@
 // Service worker simple — cache-first del shell, network-first de OBF.
 // Cambiá CACHE_VERSION cuando deployes una nueva versión para forzar refresh.
 
-const CACHE_VERSION = "curlycheck-v4";
+const CACHE_VERSION = "curlycheck-v5";
 const SCOPE = "/curlycheck/";
 const SHELL = [
   SCOPE,
@@ -21,6 +21,7 @@ const SHELL = [
   SCOPE + "src/firebase-config.js",
   SCOPE + "src/search.js",
   SCOPE + "src/fuzzy.js",
+  SCOPE + "src/share.js",
   SCOPE + "icons/icon-192.png",
   SCOPE + "icons/icon-512.png",
   SCOPE + "icons/icon-maskable-512.png",

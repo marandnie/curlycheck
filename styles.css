@@ -415,6 +415,39 @@ pre {
   padding: 6px 0;
 }
 
+/* Sub-veredictos por categoría */
+.category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 14px;
+}
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: white;
+}
+.cat-chip-icon {
+  font-weight: 800;
+  font-size: 13px;
+}
+.cat-clean {
+  background: var(--apto-bg);
+  color: var(--apto-fg);
+  border-color: var(--apto-bg);
+}
+.cat-present {
+  background: var(--noapto-bg);
+  color: var(--noapto-fg);
+  border-color: var(--noapto-bg);
+}
+
 /* OCR auto-corrections note */
 .ocr-corrections-note {
   margin: 8px 0 0;

@@ -1,7 +1,8 @@
 // App principal: routing simple entre vistas, lifecycle de cámara,
 // detector de barcode, integración OBF, render de resultado, estantería.
 
-import { classify, VERDICT } from "./classifier.js";
+import { classify, categorySummary, VERDICT } from "./classifier.js";
+import { shareResult } from "./share.js";
 import { fetchByBarcode } from "./obf.js";
 import { lookupLocal } from "./local-products.js";
 import { recognize, cleanInciText } from "./ocr.js";
@@ -385,7 +386,50 @@ function renderResult(r) {
     fallback.hidden = true;
   }
 
+  // Sub-veredictos por categoría
+  renderCategoryChips(r);
+
   showView("result");
+}
+
+const CAT_LABELS = {
+  sulfates: "Sulfatos",
+  silicones: "Siliconas",
+  alcohols: "Alcohol secante",
+  minerals: "Aceite mineral",
+};
+
+function renderCategoryChips(r) {
+  const block = document.getElementById("category-chips");
+  if (!r.inci) {
+    block.hidden = true;
+    block.innerHTML = "";
+    return;
+  }
+  // Reusar el ruleset que el clasificador usó (con un fallback al estándar)
+  const rsKey = state.ruleset || "standard";
+  const summary = categorySummary(r.inci, rsKey);
+  // Guardar en state.current para que el share lo pueda usar
+  state.currentCategorySummary = summary;
+
+  block.innerHTML = "";
+  for (const key of ["sulfates", "silicones", "alcohols", "minerals"]) {
+    const s = summary[key];
+    if (!s || s.state === "na") continue;
+    const chip = document.createElement("div");
+    chip.className = `cat-chip cat-${s.state}`;
+    const icon = s.state === "clean" ? "✓" : s.state === "present" ? "✗" : "—";
+    const prefix = s.state === "clean" ? "Sin" : "Con";
+    chip.innerHTML = `
+      <span class="cat-chip-icon">${icon}</span>
+      <span class="cat-chip-label">${prefix} ${escape(CAT_LABELS[key])}</span>
+    `;
+    if (s.state === "present" && s.matches.length) {
+      chip.title = s.matches.join(", ");
+    }
+    block.appendChild(chip);
+  }
+  block.hidden = block.childElementCount === 0;
 }
 
 document.getElementById("btn-back-from-result").addEventListener("click", () => showView("scan"));
@@ -408,6 +452,22 @@ document.getElementById("btn-save-shelf").addEventListener("click", async () => 
     alert("Guardado en tu estantería ✓");
   } catch (e) {
     alert("No se pudo guardar: " + e.message);
+  }
+});
+
+document.getElementById("btn-share").addEventListener("click", async () => {
+  if (!state.current) return;
+  try {
+    const r = await shareResult(state.current, state.currentCategorySummary);
+    if (r.method === "clipboard") {
+      alert("Copiado al portapapeles ✓");
+    } else if (r.method === "manual") {
+      // Fallback: textarea para copiar a mano
+      prompt("Copiá el texto:", r.text);
+    }
+    // 'share' y 'abort' no requieren feedback adicional
+  } catch (e) {
+    alert("No se pudo compartir: " + e.message);
   }
 });
 
