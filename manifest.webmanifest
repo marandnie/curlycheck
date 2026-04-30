@@ -1,0 +1,33 @@
+{
+  "name": "Curly Check",
+  "short_name": "Curly Check",
+  "description": "Escaneá tu producto capilar y descubrí si cumple el Método Curly.",
+  "start_url": "/curlycheck/",
+  "scope": "/curlycheck/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#4FD1A8",
+  "background_color": "#FFF8F0",
+  "lang": "es",
+  "categories": ["beauty", "lifestyle", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

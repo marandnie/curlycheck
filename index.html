@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Curly Check</title>
+  <meta name="description" content="Escaneá tu producto capilar y descubrí si cumple el Método Curly." />
+  <meta name="theme-color" content="#4FD1A8" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/favicon.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Curly Check</h1>
+    <nav>
+      <button data-view="scan" class="nav-btn is-active">Escanear</button>
+      <button data-view="shelf" class="nav-btn">Mi estantería</button>
+    </nav>
+  </header>
+
+  <main id="app">
+    <!-- View: SCAN -->
+    <section id="view-scan" class="view is-active">
+      <div class="card">
+        <h2>Escaneá un producto</h2>
+        <p class="muted">Apuntá la cámara al código de barras del envase. Si tu navegador no soporta lectura de barcode automática, podés ingresar el código a mano o pegar la INCI.</p>
+
+        <div class="scanner">
+          <video id="cam" autoplay muted playsinline></video>
+          <div class="scanner-overlay">
+            <div class="scanner-frame"></div>
+          </div>
+          <div class="scanner-status" id="scan-status">Listo para escanear</div>
+        </div>
+
+        <div class="scanner-controls">
+          <button id="btn-start-cam" class="btn btn-primary">Activar cámara</button>
+          <button id="btn-stop-cam" class="btn btn-ghost" hidden>Apagar cámara</button>
+        </div>
+
+        <details>
+          <summary>Ingresar manualmente</summary>
+          <div class="manual">
+            <label>
+              Código de barras
+              <div class="input-group">
+                <input type="text" id="barcode-input" inputmode="numeric" placeholder="ej. 3474636968640" />
+                <button id="btn-barcode-go" class="btn">Buscar en OBF</button>
+              </div>
+            </label>
+            <p class="or">— o —</p>
+            <label>
+              Pegá la lista de ingredientes (INCI)
+              <textarea id="inci-input" rows="6" placeholder="Aqua, Sodium Lauryl Sulfate, Cetearyl Alcohol, ..."></textarea>
+            </label>
+            <label>
+              Nombre del producto (opcional)
+              <input type="text" id="product-name-input" placeholder="ej. Mi shampoo" />
+            </label>
+            <button id="btn-classify-inci" class="btn btn-primary">Clasificar INCI</button>
+          </div>
+        </details>
+
+        <div class="ruleset-row">
+          <label>Ruleset:</label>
+          <select id="ruleset-select">
+            <option value="standard" selected>Estándar (Oh My Rula)</option>
+            <option value="strict">Estricto (CGM purista)</option>
+            <option value="lenient">Laxa (low-poo)</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- View: RESULT -->
+    <section id="view-result" class="view">
+      <div class="card result-card">
+        <button class="back-link" id="btn-back-from-result">← Volver</button>
+        <h2 id="result-product-name">Producto</h2>
+        <p class="muted" id="result-product-brand"></p>
+
+        <div class="verdict-block" id="verdict-block">
+          <span class="verdict-label" id="verdict-label">—</span>
+          <p class="verdict-sub" id="verdict-sub"></p>
+        </div>
+
+        <div id="offenders" class="offenders"></div>
+
+        <details>
+          <summary>Ver INCI completa</summary>
+          <pre id="result-inci"></pre>
+        </details>
+
+        <details id="unknown-block" hidden>
+          <summary>Ingredientes no reconocidos</summary>
+          <ul id="unknown-list"></ul>
+        </details>
+
+        <div class="actions">
+          <button id="btn-save-shelf" class="btn btn-primary">Guardar en mi estantería</button>
+          <button id="btn-scan-again" class="btn btn-ghost">Escanear otro</button>
+        </div>
+
+        <p class="source-note" id="source-note"></p>
+      </div>
+    </section>
+
+    <!-- View: SHELF -->
+    <section id="view-shelf" class="view">
+      <div class="card">
+        <h2>Mi estantería</h2>
+        <p class="muted" id="shelf-empty" hidden>Todavía no guardaste productos. Escaneá uno y tocá "Guardar en mi estantería".</p>
+        <ul id="shelf-list" class="shelf-list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <small>Datos de productos: <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener">Open Beauty Facts</a> (CC-BY-SA).</small>
+  </footer>
+
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
