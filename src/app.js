@@ -5,7 +5,13 @@ import { classify, VERDICT } from "./classifier.js";
 import { fetchByBarcode } from "./obf.js";
 import { lookupLocal } from "./local-products.js";
 import { recognize, cleanInciText } from "./ocr.js";
+import { correctInciText } from "./fuzzy.js";
+import { searchByName } from "./search.js";
 import * as shelf from "./shelf.js";
+import {
+  initAuth, signInWithGoogle, signOut, onAuthChanged, getCurrentUser,
+} from "./auth.js";
+import { FIREBASE_ENABLED } from "./firebase-config.js";
 
 // ---------------------------------------------------------------------------
 // Estado
@@ -186,6 +192,76 @@ document.getElementById("btn-barcode-go").addEventListener("click", async () => 
   await handleBarcode(code);
 });
 
+// ---------------------------------------------------------------------------
+// Búsqueda por nombre (local + OBF)
+// ---------------------------------------------------------------------------
+const searchInput = document.getElementById("search-input");
+const btnSearch = document.getElementById("btn-search");
+const searchResults = document.getElementById("search-results");
+
+async function runSearch() {
+  const q = searchInput.value.trim();
+  if (q.length < 2) {
+    searchResults.innerHTML = `<li class="search-empty">Escribí al menos 2 letras.</li>`;
+    return;
+  }
+  searchResults.innerHTML = `<li class="search-empty">Buscando…</li>`;
+  const hits = await searchByName(q);
+  if (hits.length === 0) {
+    searchResults.innerHTML = `<li class="search-empty">Sin resultados. Probá pegar la INCI manualmente.</li>`;
+    return;
+  }
+  searchResults.innerHTML = "";
+  for (const h of hits) {
+    const li = document.createElement("li");
+    li.className = "search-hit";
+    const sourceTag = h.source === "Base local" ? "local" : "obf";
+    li.innerHTML = `
+      <div class="search-hit-info">
+        <strong>${escape(h.name || "(sin nombre)")}</strong>
+        <small>${escape(h.brand || "")} ${h.hasInci ? "" : "· sin INCI"}</small>
+      </div>
+      <span class="search-hit-source src-${sourceTag}">${sourceTag}</span>
+    `;
+    li.addEventListener("click", () => {
+      if (h.hasInci) {
+        const result = classify(h.inci, state.ruleset);
+        state.current = {
+          name: h.name,
+          brand: h.brand || "",
+          barcode: h.barcode || null,
+          inci: h.inci,
+          verdict: result.verdict,
+          ruleset: result.ruleset,
+          offenders: result.offenders,
+          unknown: result.unknown,
+          notes: result.notes,
+          source: h.source === "Base local" ? "Base local" : `Open Beauty Facts · ${h.barcode || ""}`,
+        };
+        renderResult(state.current);
+      } else {
+        // Sin INCI → ofrecer OCR
+        showResultStub({
+          name: h.name,
+          brand: h.brand || "",
+          barcode: h.barcode || null,
+          inci: "",
+          verdict: VERDICT.VERIFICAR,
+          notes: "Producto encontrado pero sin INCI. Sacale foto a los ingredientes.",
+          source: h.source,
+          allowOcr: true,
+        });
+      }
+    });
+    searchResults.appendChild(li);
+  }
+}
+
+btnSearch.addEventListener("click", runSearch);
+searchInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") runSearch();
+});
+
 document.getElementById("btn-classify-inci").addEventListener("click", () => {
   const inci = document.getElementById("inci-input").value.trim();
   const name = document.getElementById("product-name-input").value.trim() || "Sin nombre";
@@ -317,27 +393,38 @@ document.getElementById("btn-scan-again").addEventListener("click", () => {
   state.scanned.clear();
   showView("scan");
 });
-document.getElementById("btn-save-shelf").addEventListener("click", () => {
+document.getElementById("btn-save-shelf").addEventListener("click", async () => {
   if (!state.current) return;
-  shelf.add({
-    name: state.current.name,
-    brand: state.current.brand,
-    barcode: state.current.barcode,
-    inci: state.current.inci,
-    verdict: state.current.verdict,
-    ruleset: state.current.ruleset,
-    source: state.current.source,
-  });
-  alert("Guardado en tu estantería ✓");
+  try {
+    await shelf.add({
+      name: state.current.name,
+      brand: state.current.brand,
+      barcode: state.current.barcode,
+      inci: state.current.inci,
+      verdict: state.current.verdict,
+      ruleset: state.current.ruleset,
+      source: state.current.source,
+    });
+    alert("Guardado en tu estantería ✓");
+  } catch (e) {
+    alert("No se pudo guardar: " + e.message);
+  }
 });
 
 // ---------------------------------------------------------------------------
 // Estantería
 // ---------------------------------------------------------------------------
-function renderShelf() {
+async function renderShelf() {
   const list = document.getElementById("shelf-list");
   const empty = document.getElementById("shelf-empty");
-  const items = shelf.getAll();
+  list.innerHTML = `<li class="shelf-loading muted">Cargando…</li>`;
+  let items = [];
+  try {
+    items = await shelf.getAll();
+  } catch (e) {
+    list.innerHTML = `<li class="shelf-error">Error: ${escape(e.message)}</li>`;
+    return;
+  }
   list.innerHTML = "";
   empty.hidden = items.length > 0;
   for (const it of items) {
@@ -355,9 +442,9 @@ function renderShelf() {
       </div>
       <button class="shelf-del" title="Eliminar">×</button>
     `;
-    li.querySelector(".shelf-del").addEventListener("click", (ev) => {
+    li.querySelector(".shelf-del").addEventListener("click", async (ev) => {
       ev.stopPropagation();
-      shelf.remove(it.id);
+      await shelf.remove(it.id);
       renderShelf();
     });
     li.addEventListener("click", () => {
@@ -453,9 +540,19 @@ ocrFile.addEventListener("change", async (e) => {
     });
 
     ocrProgress.hidden = true;
-    ocrText.value = cleanInciText(text);
+    // Limpieza heurística + autocorrección contra el catálogo INCI
+    const cleaned = cleanInciText(text);
+    const { text: corrected, changes } = correctInciText(cleaned);
+    ocrText.value = corrected;
     ocrTextLabel.hidden = false;
     btnOcrClassify.hidden = false;
+    if (changes.length > 0) {
+      const note = document.getElementById("ocr-corrections-note");
+      if (note) {
+        note.hidden = false;
+        note.textContent = `✨ Auto-corregimos ${changes.length} ingrediente${changes.length === 1 ? "" : "s"} (revisalos por las dudas).`;
+      }
+    }
     ocrText.focus();
   } catch (err) {
     ocrProgressText.textContent = `Error de OCR: ${err.message}`;
@@ -496,6 +593,83 @@ function humanizeStatus(s) {
     "recognizing text": "Leyendo ingredientes…",
   };
   return map[s] || s;
+}
+
+// ---------------------------------------------------------------------------
+// Auth UI (botón login + avatar en topbar)
+// ---------------------------------------------------------------------------
+const authBtn = document.getElementById("btn-auth");
+const authStatus = document.getElementById("auth-status");
+
+function renderAuthUI(user) {
+  if (!FIREBASE_ENABLED) {
+    if (authBtn) authBtn.hidden = true;
+    if (authStatus) authStatus.hidden = true;
+    return;
+  }
+  if (user) {
+    authBtn.textContent = "Salir";
+    authBtn.dataset.action = "signout";
+    authBtn.hidden = false;
+    authStatus.hidden = false;
+    authStatus.innerHTML = `
+      ${user.photoURL ? `<img class="avatar" src="${user.photoURL}" alt="">` : ""}
+      <span class="auth-email">${escape(user.displayName || user.email || "Conectada")}</span>
+    `;
+  } else {
+    authBtn.textContent = "Ingresar con Google";
+    authBtn.dataset.action = "signin";
+    authBtn.hidden = false;
+    authStatus.hidden = true;
+    authStatus.innerHTML = "";
+  }
+}
+
+if (authBtn) {
+  authBtn.addEventListener("click", async () => {
+    try {
+      if (authBtn.dataset.action === "signout") {
+        await signOut();
+      } else {
+        await signInWithGoogle();
+      }
+    } catch (e) {
+      alert("Error de auth: " + e.message);
+    }
+  });
+}
+
+async function maybeOfferMigration() {
+  // Si la usuaria recién logeó y tiene productos en localStorage, ofrecemos sync.
+  const localCount = shelf.localCount();
+  if (!localCount) return;
+  const ok = confirm(
+    `Tenés ${localCount} producto${localCount === 1 ? "" : "s"} guardado${localCount === 1 ? "" : "s"} en este dispositivo. ¿Querés sincronizarlos con tu cuenta para verlos en cualquier dispositivo?`,
+  );
+  if (!ok) return;
+  try {
+    const { migrated } = await shelf.migrateLocalToCloud({ clearAfter: true });
+    alert(`Listo, sincronizamos ${migrated} producto${migrated === 1 ? "" : "s"} a tu cuenta.`);
+    if (state.view === "shelf") renderShelf();
+  } catch (e) {
+    alert("No se pudo sincronizar: " + e.message);
+  }
+}
+
+// Init auth + listener
+if (FIREBASE_ENABLED) {
+  initAuth().catch((e) => console.warn("initAuth error:", e));
+  let prevUser = null;
+  onAuthChanged((user) => {
+    const wasNotLogged = !prevUser;
+    prevUser = user;
+    renderAuthUI(user);
+    if (state.view === "shelf") renderShelf();
+    // Cuando una usuaria recién logea, ofrecer migración de items locales
+    if (user && wasNotLogged) maybeOfferMigration();
+  });
+} else {
+  renderAuthUI(null);
 }
 
 // ---------------------------------------------------------------------------

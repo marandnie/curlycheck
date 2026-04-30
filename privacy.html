@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Política de privacidad — Curly Check</title>
+  <meta name="theme-color" content="#4FD1A8" />
+  <link rel="icon" href="./icons/favicon.png" />
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    .privacy {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px 18px 60px;
+    }
+    .privacy h1 { font-size: 24px; margin: 0 0 4px; }
+    .privacy h2 { font-size: 18px; margin-top: 28px; }
+    .privacy p, .privacy li { font-size: 15px; line-height: 1.55; }
+    .privacy time { color: var(--muted); font-size: 13px; }
+    .privacy a { color: var(--mint-dark); }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-row">
+      <h1>Curly Check</h1>
+      <a href="./index.html" class="auth-btn">Volver a la app</a>
+    </div>
+  </header>
+
+  <main class="privacy">
+    <h1>Política de privacidad</h1>
+    <p><time datetime="2026-04-30">Última actualización: 30 de abril de 2026</time></p>
+
+    <p>Curly Check es una app web progresiva (PWA) que clasifica productos capilares contra el Método Curly. Esta política explica qué datos manejamos y cómo.</p>
+
+    <h2>Resumen rápido</h2>
+    <ul>
+      <li>No usamos cookies de tracking ni publicidad.</li>
+      <li>No vendemos datos a terceros.</li>
+      <li>Los datos de la estantería se guardan en tu dispositivo (localStorage) por defecto.</li>
+      <li>Si iniciás sesión con Google, sincronizamos tu estantería en Firebase Firestore atada a tu cuenta. Sólo vos podés leerla o modificarla.</li>
+      <li>Las consultas a Open Beauty Facts viajan directo desde tu navegador a sus servidores; no pasan por nosotros.</li>
+      <li>Las fotos que tomás para OCR se procesan 100% en tu navegador con Tesseract.js. Nunca se suben a ningún servidor.</li>
+    </ul>
+
+    <h2>Datos que recolectamos</h2>
+
+    <h3>1. Datos en tu dispositivo (sin login)</h3>
+    <p>Por defecto, todo lo que escaneás (productos, INCI, veredictos) se guarda en el <code>localStorage</code> de tu navegador. Estos datos:</p>
+    <ul>
+      <li>Quedan en tu dispositivo, no en nuestros servidores.</li>
+      <li>Se borran si desinstalás la app o limpiás los datos del navegador.</li>
+      <li>No los compartimos con nadie.</li>
+    </ul>
+
+    <h3>2. Datos en la nube (con login Google opcional)</h3>
+    <p>Si elegís iniciar sesión con tu cuenta de Google, sincronizamos tu estantería en Firebase Firestore (un servicio de Google). En ese caso guardamos:</p>
+    <ul>
+      <li>Tu identificador único de Firebase (UID) y email.</li>
+      <li>Los productos que guardás en la estantería: nombre, marca, código de barras (si lo escaneaste), lista de ingredientes, veredicto, fecha.</li>
+    </ul>
+    <p>Las reglas de seguridad de Firestore garantizan que sólo vos (autenticada con tu cuenta) podés leer o modificar tu propia data. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Política de privacidad de Google</a>.</p>
+
+    <h3>3. Cámara, fotos y OCR</h3>
+    <p>La app pide acceso a la cámara para:</p>
+    <ul>
+      <li>Leer códigos de barras (los códigos detectados nunca se envían a un servidor — sólo se usan para consultar Open Beauty Facts).</li>
+      <li>Tomar fotos de etiquetas para OCR.</li>
+    </ul>
+    <p>Las fotos se procesan en tu navegador con Tesseract.js (una librería que corre en JavaScript, sin servidor). <strong>Las imágenes no se suben a ningún lado y se descartan apenas se extrae el texto.</strong></p>
+
+    <h3>4. Datos de productos: Open Beauty Facts</h3>
+    <p>Cuando consultamos información de un producto por su código de barras, hacemos una solicitud directa desde tu navegador a la API de <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener">Open Beauty Facts</a>. Open Beauty Facts es un proyecto de datos abiertos. Su política de privacidad aplica a esa interacción.</p>
+
+    <h2>Cookies y tracking</h2>
+    <p>No usamos cookies de tracking, analítica ni publicidad. La única información persistente local es:</p>
+    <ul>
+      <li><code>localStorage</code> con tu estantería de productos.</li>
+      <li>Cache del Service Worker para que la app funcione offline.</li>
+      <li>IndexedDB con los datos de Tesseract.js (modelos de OCR, ~3 MB).</li>
+      <li>Token de sesión de Firebase Auth si iniciaste sesión.</li>
+    </ul>
+
+    <h2>Permisos del dispositivo</h2>
+    <ul>
+      <li><strong>Cámara</strong>: para leer barcodes y fotos de etiquetas. Podés revocar el permiso cuando quieras desde la configuración del navegador / sistema.</li>
+      <li><strong>Almacenamiento</strong>: para guardar tu estantería y el cache offline.</li>
+    </ul>
+
+    <h2>Tus derechos</h2>
+    <ul>
+      <li><strong>Eliminar tu estantería local</strong>: borrá los datos de la app desde la configuración del navegador, o desinstalá la app.</li>
+      <li><strong>Eliminar tu estantería en la nube</strong>: cerrá sesión y eliminá tu cuenta enviándonos un email a <a href="mailto:mandieto@gmail.com">mandieto@gmail.com</a>. También podés borrar items uno por uno desde la app.</li>
+      <li><strong>Exportar tus datos</strong>: pedinos un export por email a la dirección de arriba.</li>
+    </ul>
+
+    <h2>Contacto</h2>
+    <p>Por dudas o pedidos relacionados con tus datos, escribinos a <a href="mailto:mandieto@gmail.com">mandieto@gmail.com</a>.</p>
+
+    <h2>Cambios en esta política</h2>
+    <p>Si modificamos esta política te avisaremos en la app y actualizaremos la fecha de "Última actualización" arriba.</p>
+  </main>
+
+  <footer class="foot">
+    <small>Datos de productos: <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener">Open Beauty Facts</a> (CC-BY-SA).</small>
+  </footer>
+</body>
+</html>

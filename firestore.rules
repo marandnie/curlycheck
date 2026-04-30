@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// Reglas de Firestore para Curly Check.
+// Cada usuaria solo puede leer/escribir su propia data en users/{uid}/...
+//
+// Para deployar estas reglas:
+//   firebase deploy --only firestore:rules
+// O pegarlas en Firebase Console > Firestore > Rules.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Documento del perfil del usuario
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Subcolección de la estantería del usuario
+      match /shelf/{itemId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Cualquier subcolección futura del usuario hereda la misma regla
+      match /{collection}/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Bloqueamos todo lo demás por defecto
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

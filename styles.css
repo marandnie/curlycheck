@@ -40,11 +40,55 @@ a { color: var(--mint-dark); }
   padding: 14px 18px 10px;
   z-index: 10;
 }
+.topbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
 .topbar h1 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.01em;
+}
+.auth-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.auth-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.auth-status .avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.auth-status .auth-email {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.auth-btn {
+  background: white;
+  border: 1px solid var(--mint);
+  color: var(--mint-dark);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.auth-btn:hover {
+  background: var(--mint-light);
 }
 .topbar nav {
   display: flex;
@@ -314,6 +358,71 @@ pre {
   text-align: center;
   padding: 16px;
   color: var(--muted);
+}
+
+/* Search results */
+.search-results {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.search-results:empty { display: none; }
+.search-hit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: white;
+  cursor: pointer;
+}
+.search-hit:hover { background: var(--cream); }
+.search-hit-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.search-hit-info strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.search-hit-info small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.search-hit-source {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.search-hit-source.src-local {
+  background: var(--mint-light);
+  color: var(--mint-dark);
+}
+.search-hit-source.src-obf {
+  background: var(--cream-2);
+  color: #8a6200;
+}
+.search-empty {
+  list-style: none;
+  font-size: 13px;
+  color: var(--muted);
+  padding: 6px 0;
+}
+
+/* OCR auto-corrections note */
+.ocr-corrections-note {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  background: var(--mint-light);
+  color: var(--mint-dark);
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 /* OCR fallback en el view RESULT */

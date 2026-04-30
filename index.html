@@ -13,7 +13,13 @@
 </head>
 <body>
   <header class="topbar">
-    <h1>Curly Check</h1>
+    <div class="topbar-row">
+      <h1>Curly Check</h1>
+      <div class="auth-area">
+        <span id="auth-status" class="auth-status" hidden></span>
+        <button id="btn-auth" class="auth-btn" hidden>Ingresar con Google</button>
+      </div>
+    </div>
     <nav>
       <button data-view="scan" class="nav-btn is-active">Escanear</button>
       <button data-view="shelf" class="nav-btn">Mi estantería</button>
@@ -39,6 +45,20 @@
           <button id="btn-start-cam" class="btn btn-primary">Activar cámara</button>
           <button id="btn-stop-cam" class="btn btn-ghost" hidden>Apagar cámara</button>
         </div>
+
+        <details>
+          <summary>Buscar por nombre</summary>
+          <div class="manual">
+            <label>
+              Nombre o marca del producto
+              <div class="input-group">
+                <input type="text" id="search-input" placeholder="ej. Curl Manifesto" autocomplete="off" />
+                <button id="btn-search" class="btn">Buscar</button>
+              </div>
+            </label>
+            <ul id="search-results" class="search-results"></ul>
+          </div>
+        </details>
 
         <details>
           <summary>Ingresar manualmente</summary>
@@ -140,6 +160,7 @@
           Texto reconocido (revisalo y corregilo si hace falta)
           <textarea id="ocr-text" rows="8" placeholder="Acá va a aparecer la INCI leída"></textarea>
         </label>
+        <p id="ocr-corrections-note" class="ocr-corrections-note" hidden></p>
 
         <button id="btn-ocr-classify" class="btn btn-primary" hidden>Clasificar INCI</button>
       </div>
@@ -156,7 +177,10 @@
   </main>
 
   <footer class="foot">
-    <small>Datos de productos: <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener">Open Beauty Facts</a> (CC-BY-SA).</small>
+    <small>
+      Datos de productos: <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener">Open Beauty Facts</a> (CC-BY-SA) ·
+      <a href="./privacy.html">Privacidad</a>
+    </small>
   </footer>
 
   <script type="module" src="./src/app.js"></script>
