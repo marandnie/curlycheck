@@ -86,6 +86,12 @@
           <p class="verdict-sub" id="verdict-sub"></p>
         </div>
 
+        <!-- Aparece sólo cuando no encontramos INCI: ofrece OCR como fallback -->
+        <div id="ocr-fallback" class="ocr-fallback" hidden>
+          <p>No tenemos la lista de ingredientes. Sacale una foto a la INCI del envase y la leemos automáticamente.</p>
+          <button id="btn-go-ocr" class="btn btn-primary">📷 Escanear ingredientes</button>
+        </div>
+
         <div id="offenders" class="offenders"></div>
 
         <details>
@@ -104,6 +110,38 @@
         </div>
 
         <p class="source-note" id="source-note"></p>
+      </div>
+    </section>
+
+    <!-- View: OCR -->
+    <section id="view-ocr" class="view">
+      <div class="card">
+        <button class="back-link" id="btn-back-from-ocr">← Volver</button>
+        <h2>Escaneá la lista de ingredientes</h2>
+        <p class="muted">Sacale una foto bien cerca al panel de ingredientes (INCI). Asegurate de que el texto se lea claro y sin reflejos.</p>
+
+        <p id="ocr-product-context" class="ocr-context muted" hidden></p>
+
+        <label class="ocr-pick">
+          <input type="file" id="ocr-file" accept="image/*" capture="environment" hidden />
+          <span class="btn btn-primary">📷 Tomar foto / Elegir imagen</span>
+        </label>
+
+        <div id="ocr-preview-wrap" class="ocr-preview-wrap" hidden>
+          <img id="ocr-preview" alt="Vista previa" />
+        </div>
+
+        <div id="ocr-progress" class="ocr-progress" hidden>
+          <div class="ocr-progress-bar"><div id="ocr-progress-fill"></div></div>
+          <small id="ocr-progress-text">Cargando OCR…</small>
+        </div>
+
+        <label class="ocr-text-label" id="ocr-text-label" hidden>
+          Texto reconocido (revisalo y corregilo si hace falta)
+          <textarea id="ocr-text" rows="8" placeholder="Acá va a aparecer la INCI leída"></textarea>
+        </label>
+
+        <button id="btn-ocr-classify" class="btn btn-primary" hidden>Clasificar INCI</button>
       </div>
     </section>
 

@@ -1,7 +1,7 @@
 // Service worker simple — cache-first del shell, network-first de OBF.
 // Cambiá CACHE_VERSION cuando deployes una nueva versión para forzar refresh.
 
-const CACHE_VERSION = "curlycheck-v1";
+const CACHE_VERSION = "curlycheck-v2";
 const SCOPE = "/curlycheck/";
 const SHELL = [
   SCOPE,
@@ -13,6 +13,8 @@ const SHELL = [
   SCOPE + "src/ingredients.js",
   SCOPE + "src/obf.js",
   SCOPE + "src/shelf.js",
+  SCOPE + "src/local-products.js",
+  SCOPE + "src/ocr.js",
   SCOPE + "icons/icon-192.png",
   SCOPE + "icons/icon-512.png",
   SCOPE + "icons/icon-maskable-512.png",
@@ -50,6 +52,24 @@ self.addEventListener("fetch", (event) => {
           return res;
         })
         .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Tesseract.js + traineddata desde jsdelivr: cache-first (son grandes y no cambian).
+  // El propio Tesseract además guarda los traineddata en IndexedDB.
+  if (url.hostname === "cdn.jsdelivr.net" || url.hostname === "tessdata.projectnaptha.com") {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((res) => {
+          if (res.ok && event.request.method === "GET") {
+            const clone = res.clone();
+            caches.open(CACHE_VERSION).then((c) => c.put(event.request, clone));
+          }
+          return res;
+        });
+      })
     );
     return;
   }
