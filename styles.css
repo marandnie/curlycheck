@@ -53,6 +53,14 @@ a { color: var(--mint-dark); }
   font-weight: 700;
   letter-spacing: -0.01em;
 }
+.topbar h1 .brand {
+  color: inherit;
+  text-decoration: none;
+  display: inline-block;
+}
+.topbar h1 .brand:hover {
+  color: var(--mint-dark);
+}
 .auth-area {
   display: flex;
   align-items: center;

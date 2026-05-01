@@ -47,6 +47,16 @@ document.querySelectorAll(".nav-btn").forEach((b) => {
   b.addEventListener("click", () => showView(b.dataset.view));
 });
 
+// Click en el logo "Curly Check" → volver al view-scan sin recargar
+const brandLink = document.getElementById("brand-link");
+if (brandLink) {
+  brandLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    state.scanned.clear();
+    showView("scan");
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Cámara + barcode detector (Chrome Android nativo)
 // ---------------------------------------------------------------------------
@@ -57,11 +67,23 @@ const scanStatus = document.getElementById("scan-status");
 
 async function startCamera() {
   if (state.videoStream) return;
+
+  // Pre-flight: necesitamos contexto seguro (https o localhost) y el API
+  if (!window.isSecureContext) {
+    const msg = "Tu navegador requiere HTTPS para usar la cámara. Probá en Chrome con esta URL en https://, o usá ingreso manual.";
+    scanStatus.textContent = msg;
+    alert(msg);
+    return;
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    const msg = "Tu navegador no soporta acceso a cámara. Usá ingreso manual.";
+    scanStatus.textContent = msg;
+    alert(msg);
+    return;
+  }
+
   try {
-    if (!("BarcodeDetector" in window)) {
-      scanStatus.textContent = "Tu navegador no soporta lectura automática. Usá ingreso manual.";
-      return;
-    }
+    // Pedimos la cámara SIEMPRE — independientemente de BarcodeDetector.
     state.videoStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: "environment" } },
       audio: false,
@@ -69,28 +91,57 @@ async function startCamera() {
     cam.srcObject = state.videoStream;
     btnStart.hidden = true;
     btnStop.hidden = false;
-    scanStatus.textContent = "Apuntá al código de barras…";
 
-    // BarcodeDetector
-    const detector = new window.BarcodeDetector({
-      formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"],
-    });
-    state.detectorLoop = setInterval(async () => {
-      try {
-        const codes = await detector.detect(cam);
-        if (codes.length > 0) {
-          const code = codes[0].rawValue;
-          if (state.scanned.has(code)) return;
-          state.scanned.add(code);
-          scanStatus.textContent = `Código detectado: ${code}`;
-          await handleBarcode(code);
+    // Si el navegador soporta BarcodeDetector nativo → activamos el loop.
+    // Si no (Firefox, Safari, Chrome incógnito a veces), mostramos la cámara
+    // igual y le pedimos a la usuaria que use el ingreso manual del barcode.
+    if ("BarcodeDetector" in window) {
+      scanStatus.textContent = "Apuntá al código de barras…";
+      const detector = new window.BarcodeDetector({
+        formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"],
+      });
+      state.detectorLoop = setInterval(async () => {
+        try {
+          const codes = await detector.detect(cam);
+          if (codes.length > 0) {
+            const code = codes[0].rawValue;
+            if (state.scanned.has(code)) return;
+            state.scanned.add(code);
+            scanStatus.textContent = `Código detectado: ${code}`;
+            await handleBarcode(code);
+          }
+        } catch (e) {
+          // silent — el detector falla a veces sobre frames intermedios
         }
-      } catch (e) {
-        // silent
-      }
-    }, 700);
+      }, 700);
+    } else {
+      scanStatus.textContent = "Tu navegador no detecta barcodes automáticamente. Tipeá el código a mano abajo.";
+    }
   } catch (e) {
-    scanStatus.textContent = `No pudimos acceder a la cámara: ${e.message}`;
+    let msg;
+    if (e.name === "NotAllowedError" || e.name === "PermissionDeniedError") {
+      msg = "Bloqueaste el permiso de cámara. Habilitalo desde el ícono del candado en la barra de direcciones y reintentá.";
+    } else if (e.name === "NotFoundError" || e.name === "DevicesNotFoundError") {
+      msg = "No encontramos una cámara en este dispositivo.";
+    } else if (e.name === "NotReadableError" || e.name === "TrackStartError") {
+      msg = "La cámara está siendo usada por otra app. Cerrala y reintentá.";
+    } else if (e.name === "OverconstrainedError") {
+      // Reintentar sin facingMode si la trasera no estuviera disponible
+      try {
+        state.videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        cam.srcObject = state.videoStream;
+        btnStart.hidden = true;
+        btnStop.hidden = false;
+        scanStatus.textContent = "Cámara activa (sin selección de cámara trasera).";
+        return;
+      } catch (e2) {
+        msg = "No se pudo acceder a la cámara: " + e2.message;
+      }
+    } else {
+      msg = "No pudimos acceder a la cámara: " + (e.message || e.name || "error desconocido");
+    }
+    scanStatus.textContent = msg;
+    alert(msg);
     btnStart.hidden = false;
     btnStop.hidden = true;
   }
