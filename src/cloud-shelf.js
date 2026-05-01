@@ -1,7 +1,5 @@
 // Cloud shelf — adapter de Firestore para la estantería.
 // Estructura: users/{uid}/shelf/{itemId}
-//
-// Item shape: { id, name, brand, barcode, inci, verdict, ruleset, source, savedAt }
 
 import { getDb, getCurrentUser } from "./auth.js";
 
@@ -20,16 +18,51 @@ export async function getAll() {
     fsMod.orderBy("savedAt", "desc"),
   );
   const snap = await fsMod.getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return snap.docs.map(function(d) { return Object.assign({ id: d.id }, d.data()); });
 }
 
-export async function add(item) {
+export async function findById(id) {
+  const user = getCurrentUser();
+  if (!user || !id) return null;
+  const ctx = await getDb();
+  if (!ctx) return null;
+  const { db, fsMod } = ctx;
+  const ref = fsMod.doc(db, "users", user.uid, "shelf", id);
+  const snap = await fsMod.getDoc(ref);
+  if (!snap.exists()) return null;
+  return Object.assign({ id: snap.id }, snap.data());
+}
+
+export async function findByBarcode(barcode) {
+  const user = getCurrentUser();
+  if (!user || !barcode) return null;
+  const ctx = await getDb();
+  if (!ctx) return null;
+  const { db, fsMod } = ctx;
+  const q = fsMod.query(
+    shelfCol(fsMod, db, user.uid),
+    fsMod.where("barcode", "==", barcode),
+    fsMod.limit(1),
+  );
+  const snap = await fsMod.getDocs(q);
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return Object.assign({ id: d.id }, d.data());
+}
+
+export async function add(item, opts) {
+  opts = opts || {};
   const user = getCurrentUser();
   if (!user) throw new Error("No hay usuario autenticado");
   const ctx = await getDb();
   if (!ctx) throw new Error("Firestore no disponible");
   const { db, fsMod } = ctx;
-  const id = item.id || (item.barcode || crypto.randomUUID());
+  let id = item.id;
+  if (!id && !opts.forceNew && item.barcode) {
+    const existing = await findByBarcode(item.barcode);
+    if (existing) id = existing.id;
+  }
+  if (!id) id = crypto.randomUUID();
   const next = {
     name: item.name || "",
     brand: item.brand || "",
@@ -42,7 +75,7 @@ export async function add(item) {
   };
   const ref = fsMod.doc(db, "users", user.uid, "shelf", id);
   await fsMod.setDoc(ref, next, { merge: true });
-  return { id, ...next };
+  return Object.assign({ id }, next);
 }
 
 export async function remove(id) {
@@ -57,12 +90,9 @@ export async function remove(id) {
 
 export async function clearAll() {
   const items = await getAll();
-  await Promise.all(items.map((it) => remove(it.id)));
+  await Promise.all(items.map(function(it) { return remove(it.id); }));
 }
 
-/** Migrar una lista de items desde local a la nube (upsert). */
 export async function importMany(items) {
-  for (const it of items) {
-    await add(it);
-  }
+  for (const it of items) await add(it);
 }

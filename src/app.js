@@ -386,6 +386,10 @@ function renderResult(r) {
     fallback.hidden = true;
   }
 
+  // Botón "Editar": sólo si el item ya está guardado en la estantería (tiene id)
+  const editBtn = document.getElementById("btn-edit-current");
+  editBtn.hidden = !r.id;
+
   // Sub-veredictos por categoría
   renderCategoryChips(r);
 
@@ -439,17 +443,114 @@ document.getElementById("btn-scan-again").addEventListener("click", () => {
 });
 document.getElementById("btn-save-shelf").addEventListener("click", async () => {
   if (!state.current) return;
+  const c = state.current;
+  const payload = {
+    name: c.name,
+    brand: c.brand,
+    barcode: c.barcode,
+    inci: c.inci,
+    verdict: c.verdict,
+    ruleset: c.ruleset,
+    source: c.source,
+  };
   try {
-    await shelf.add({
-      name: state.current.name,
-      brand: state.current.brand,
-      barcode: state.current.barcode,
-      inci: state.current.inci,
-      verdict: state.current.verdict,
-      ruleset: state.current.ruleset,
-      source: state.current.source,
-    });
+    // Detectar duplicado por barcode con INCI distinta → preguntar
+    if (c.barcode) {
+      const existing = await shelf.findByBarcode(c.barcode);
+      if (existing && existing.inci && c.inci && existing.inci !== c.inci) {
+        const fechaTxt = formatRelativeDate(existing.savedAt);
+        const replace = confirm(
+          `Ya tenés "${existing.name || "este producto"}" guardado` +
+          (fechaTxt ? ` (${fechaTxt})` : "") +
+          ` con una INCI distinta.\n\n` +
+          `¿Reemplazarlo con la nueva versión?\n\n` +
+          `OK = Reemplazar (perdés la INCI vieja)\n` +
+          `Cancelar = Te pregunto si guardarlo aparte`
+        );
+        if (replace) {
+          await shelf.add(payload); // dedupe por barcode → sobreescribe
+          alert("Actualizado ✓");
+        } else {
+          const apart = confirm("¿Guardar como otro item (queda el viejo y el nuevo)?");
+          if (!apart) return;
+          await shelf.add(payload, { forceNew: true });
+          alert("Guardado como nuevo ítem ✓");
+        }
+        renderShelf();
+        return;
+      }
+    }
+    await shelf.add(payload);
     alert("Guardado en tu estantería ✓");
+  } catch (e) {
+    alert("No se pudo guardar: " + e.message);
+  }
+});
+
+function formatRelativeDate(ts) {
+  if (!ts) return "";
+  const days = Math.round((Date.now() - ts) / (24 * 3600 * 1000));
+  if (days <= 0) return "hoy";
+  if (days === 1) return "ayer";
+  if (days < 30) return `hace ${days} días`;
+  const months = Math.round(days / 30);
+  return months === 1 ? "hace 1 mes" : `hace ${months} meses`;
+}
+
+// Edición de un item de la estantería
+// ---------------------------------------------------------------------------
+const editName = document.getElementById("edit-name");
+const editBrand = document.getElementById("edit-brand");
+const editBarcode = document.getElementById("edit-barcode");
+const editInci = document.getElementById("edit-inci");
+
+function openEdit(item) {
+  state.editTarget = { ...item };
+  editName.value = item.name || "";
+  editBrand.value = item.brand || "";
+  editBarcode.value = item.barcode || "";
+  editInci.value = item.inci || "";
+  showView("edit");
+}
+
+document.getElementById("btn-edit-current").addEventListener("click", () => {
+  if (state.current) openEdit(state.current);
+});
+document.getElementById("btn-back-from-edit").addEventListener("click", () => {
+  state.editTarget = null;
+  showView(state.current && state.current.id ? "shelf" : "scan");
+});
+document.getElementById("btn-cancel-edit").addEventListener("click", () => {
+  state.editTarget = null;
+  showView("shelf");
+});
+document.getElementById("btn-save-edit").addEventListener("click", async () => {
+  if (!state.editTarget) return;
+  const target = state.editTarget;
+  const newInci = (editInci.value || "").trim();
+  const result = classify(newInci, state.ruleset);
+  const merged = {
+    ...target,
+    name: editName.value.trim() || target.name || "",
+    brand: editBrand.value.trim(),
+    barcode: editBarcode.value.trim() || null,
+    inci: newInci,
+    verdict: result.verdict,
+    ruleset: result.ruleset,
+    source: target.source ? `${target.source} (editado)` : "Editado a mano",
+  };
+  try {
+    const saved = await shelf.add(merged); // mantiene id si target.id existe
+    state.current = {
+      ...merged,
+      id: saved.id,
+      offenders: result.offenders,
+      unknown: result.unknown,
+      notes: result.notes,
+    };
+    state.editTarget = null;
+    alert("Cambios guardados ✓");
+    renderResult(state.current);
   } catch (e) {
     alert("No se pudo guardar: " + e.message);
   }
@@ -688,57 +789,4 @@ function renderAuthUI(user) {
 if (authBtn) {
   authBtn.addEventListener("click", async () => {
     try {
-      if (authBtn.dataset.action === "signout") {
-        await signOut();
-      } else {
-        await signInWithGoogle();
-      }
-    } catch (e) {
-      alert("Error de auth: " + e.message);
-    }
-  });
-}
-
-async function maybeOfferMigration() {
-  // Si la usuaria recién logeó y tiene productos en localStorage, ofrecemos sync.
-  const localCount = shelf.localCount();
-  if (!localCount) return;
-  const ok = confirm(
-    `Tenés ${localCount} producto${localCount === 1 ? "" : "s"} guardado${localCount === 1 ? "" : "s"} en este dispositivo. ¿Querés sincronizarlos con tu cuenta para verlos en cualquier dispositivo?`,
-  );
-  if (!ok) return;
-  try {
-    const { migrated } = await shelf.migrateLocalToCloud({ clearAfter: true });
-    alert(`Listo, sincronizamos ${migrated} producto${migrated === 1 ? "" : "s"} a tu cuenta.`);
-    if (state.view === "shelf") renderShelf();
-  } catch (e) {
-    alert("No se pudo sincronizar: " + e.message);
-  }
-}
-
-// Init auth + listener
-if (FIREBASE_ENABLED) {
-  initAuth().catch((e) => console.warn("initAuth error:", e));
-  let prevUser = null;
-  onAuthChanged((user) => {
-    const wasNotLogged = !prevUser;
-    prevUser = user;
-    renderAuthUI(user);
-    if (state.view === "shelf") renderShelf();
-    // Cuando una usuaria recién logea, ofrecer migración de items locales
-    if (user && wasNotLogged) maybeOfferMigration();
-  });
-} else {
-  renderAuthUI(null);
-}
-
-// ---------------------------------------------------------------------------
-// Service worker
-// ---------------------------------------------------------------------------
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js").catch((e) => {
-      console.warn("SW register failed", e);
-    });
-  });
-}
+      if (auth

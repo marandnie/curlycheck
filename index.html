@@ -129,6 +129,7 @@
         <div class="actions">
           <button id="btn-save-shelf" class="btn btn-primary">Guardar</button>
           <button id="btn-share" class="btn">Compartir</button>
+          <button id="btn-edit-current" class="btn" hidden>Editar</button>
           <button id="btn-scan-again" class="btn btn-ghost">Otro</button>
         </div>
 
@@ -166,6 +167,39 @@
         <p id="ocr-corrections-note" class="ocr-corrections-note" hidden></p>
 
         <button id="btn-ocr-classify" class="btn btn-primary" hidden>Clasificar INCI</button>
+      </div>
+    </section>
+
+    <!-- View: EDIT -->
+    <section id="view-edit" class="view">
+      <div class="card">
+        <button class="back-link" id="btn-back-from-edit">← Volver</button>
+        <h2>Editar producto</h2>
+        <p class="muted">Corregí lo que haga falta. Al guardar, recalculamos el veredicto.</p>
+
+        <div class="manual">
+          <label>
+            Nombre
+            <input type="text" id="edit-name" />
+          </label>
+          <label>
+            Marca
+            <input type="text" id="edit-brand" />
+          </label>
+          <label>
+            Código de barras (opcional)
+            <input type="text" id="edit-barcode" inputmode="numeric" />
+          </label>
+          <label>
+            Lista de ingredientes (INCI)
+            <textarea id="edit-inci" rows="8"></textarea>
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="btn-save-edit" class="btn btn-primary">Guardar cambios</button>
+          <button id="btn-cancel-edit" class="btn btn-ghost">Cancelar</button>
+        </div>
       </div>
     </section>
 

@@ -4,10 +4,6 @@
 //
 // La API pública es asíncrona en ambos casos para que el caller no se entere
 // de cuál backend está activo.
-//
-// El módulo también expone helpers de migración: cuando una usuaria sin login
-// hace sign-in y tiene productos en localStorage, podemos ofrecerle subirlos
-// a la nube.
 
 import { getCurrentUser } from "./auth.js";
 import * as cloud from "./cloud-shelf.js";
@@ -30,22 +26,37 @@ const local = {
     localStorage.setItem(KEY, JSON.stringify(items));
   },
   getAll() {
-    return this.read().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+    return this.read().sort(function(a, b) { return (b.savedAt || 0) - (a.savedAt || 0); });
   },
-  add(item) {
+  findById(id) {
+    if (!id) return null;
+    return this.read().find(function(it) { return it.id === id; }) || null;
+  },
+  findByBarcode(barcode) {
+    if (!barcode) return null;
+    return this.read().find(function(it) { return it.barcode === barcode; }) || null;
+  },
+  add(item, opts) {
+    opts = opts || {};
     const items = this.read();
-    const id = item.id || (item.barcode || crypto.randomUUID());
-    const next = { ...item, id, savedAt: item.savedAt || Date.now() };
-    const idx = items.findIndex(
-      (it) => it.id === id || (item.barcode && it.barcode === item.barcode),
-    );
-    if (idx >= 0) items[idx] = { ...items[idx], ...next };
+    let id = item.id;
+    if (!id) {
+      // Sólo deduplicar por barcode si NO se pidió forceNew
+      if (!opts.forceNew && item.barcode) {
+        const existing = items.find(function(it) { return it.barcode === item.barcode; });
+        if (existing) id = existing.id;
+      }
+      if (!id) id = crypto.randomUUID();
+    }
+    const next = Object.assign({}, item, { id, savedAt: item.savedAt || Date.now() });
+    const idx = items.findIndex(function(it) { return it.id === id; });
+    if (idx >= 0) items[idx] = Object.assign({}, items[idx], next);
     else items.unshift(next);
     this.write(items);
     return next;
   },
   remove(id) {
-    const items = this.read().filter((it) => it.id !== id);
+    const items = this.read().filter(function(it) { return it.id !== id; });
     this.write(items);
   },
   clear() {
@@ -67,41 +78,35 @@ export async function getAll() {
   return isLogged() ? cloud.getAll() : local.getAll();
 }
 
-export async function add(item) {
-  if (isLogged()) return cloud.add(item);
-  return local.add(item);
+export async function findById(id) {
+  return isLogged() ? cloud.findById(id) : local.findById(id);
+}
+
+export async function findByBarcode(barcode) {
+  return isLogged() ? cloud.findByBarcode(barcode) : local.findByBarcode(barcode);
+}
+
+export async function add(item, opts) {
+  return isLogged() ? cloud.add(item, opts) : local.add(item, opts);
 }
 
 export async function remove(id) {
-  if (isLogged()) return cloud.remove(id);
-  return local.remove(id);
+  return isLogged() ? cloud.remove(id) : local.remove(id);
 }
 
 export async function clearShelf() {
-  if (isLogged()) return cloud.clearAll();
-  return local.clear();
+  return isLogged() ? cloud.clearAll() : local.clear();
 }
 
 // ---------------------------------------------------------------------------
 // Migración local → cloud
 // ---------------------------------------------------------------------------
-/** Cantidad de items en localStorage (independiente del estado de auth). */
-export function localCount() {
-  return local.count();
-}
+export function localCount() { return local.count(); }
+export function localItems() { return local.getAll(); }
+export function clearLocal() { local.clear(); }
 
-/** Devuelve los items en localStorage (sin tocar el cloud). */
-export function localItems() {
-  return local.getAll();
-}
-
-/** Limpia el localStorage. Usar después de migrar exitosamente. */
-export function clearLocal() {
-  local.clear();
-}
-
-/** Sube los items locales al cloud y opcionalmente limpia el local. */
-export async function migrateLocalToCloud(opts = { clearAfter: true }) {
+export async function migrateLocalToCloud(opts) {
+  opts = opts || { clearAfter: true };
   if (!isLogged()) throw new Error("Hace falta estar logueada para migrar");
   const items = local.getAll();
   if (items.length === 0) return { migrated: 0 };
