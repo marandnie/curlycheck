@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Glosario — Curly Check</title>
+  <meta name="description" content="Diccionario rápido de términos del Método Curly: INCI, sulfatos, siliconas, alcoholes secantes y más." />
+  <meta name="theme-color" content="#4FD1A8" />
+  <link rel="icon" href="./icons/favicon.png" />
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    .glossary { max-width: 720px; margin: 0 auto; padding: 24px 18px 60px; }
+    .glossary h1 { font-size: 24px; margin: 0 0 8px; }
+    .glossary p.muted { margin: 0 0 24px; }
+    .glossary dl { margin: 0; }
+    .glossary dt {
+      font-weight: 700;
+      font-size: 16px;
+      margin-top: 22px;
+      color: var(--ink);
+      scroll-margin-top: 80px;
+    }
+    .glossary dt:target {
+      background: var(--mint-light);
+      padding: 4px 10px;
+      border-radius: 8px;
+      margin-left: -10px;
+    }
+    .glossary dd {
+      margin: 4px 0 0;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--ink);
+    }
+    .glossary dd code {
+      background: var(--cream-2);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .glossary .tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .glossary .tag.apto { background: var(--apto-bg); color: var(--apto-fg); }
+    .glossary .tag.no { background: var(--noapto-bg); color: var(--noapto-fg); }
+    .glossary .tag.verif { background: var(--verif-bg); color: var(--verif-fg); }
+    .glossary nav.toc {
+      background: var(--cream-2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 24px;
+    }
+    .glossary nav.toc h2 { font-size: 13px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
+    .glossary nav.toc ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+    .glossary nav.toc a { font-size: 13px; color: var(--mint-dark); text-decoration: none; }
+    .glossary nav.toc a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-row">
+      <h1>Curly Check</h1>
+      <a href="./index.html" class="auth-btn">Volver a la app</a>
+    </div>
+  </header>
+
+  <main class="glossary">
+    <h1>Glosario</h1>
+    <p class="muted">Los términos que vas a encontrar en la app y en cualquier discusión sobre el Método Curly.</p>
+
+    <nav class="toc" aria-label="Términos">
+      <h2>Buscar término</h2>
+      <ul>
+        <li><a href="#inci">INCI</a></li>
+        <li><a href="#metodo-curly">Método Curly</a></li>
+        <li><a href="#sulfato">Sulfato</a></li>
+        <li><a href="#sulfonato">Sulfonato</a></li>
+        <li><a href="#silicona">Silicona</a></li>
+        <li><a href="#silicona-soluble">Silicona soluble</a></li>
+        <li><a href="#alcohol-secante">Alcohol secante</a></li>
+        <li><a href="#alcohol-graso">Alcohol graso</a></li>
+        <li><a href="#aceite-mineral">Aceite mineral</a></li>
+        <li><a href="#cera">Cera</a></li>
+        <li><a href="#humectante">Humectante</a></li>
+        <li><a href="#protein">Proteínas</a></li>
+        <li><a href="#low-poo-no-poo">Low-poo / No-poo</a></li>
+        <li><a href="#cgm">CGM</a></li>
+        <li><a href="#obf">Open Beauty Facts (OBF)</a></li>
+        <li><a href="#ruleset">Ruleset</a></li>
+        <li><a href="#veredicto">APTO / NO APTO / VERIFICAR</a></li>
+        <li><a href="#ocr">OCR</a></li>
+        <li><a href="#barcode">Código de barras</a></li>
+      </ul>
+    </nav>
+
+    <dl>
+      <dt id="inci">INCI</dt>
+      <dd>
+        <em>International Nomenclature of Cosmetic Ingredients.</em> Es el sistema internacional con el que se nombran los ingredientes cosméticos en las etiquetas. Los nombres están estandarizados (ej. <code>Aqua</code> es agua, <code>Sodium Laureth Sulfate</code> es un sulfato común) para que sean iguales sin importar el idioma. La INCI siempre va de mayor a menor concentración: lo primero de la lista es lo que más hay.
+      </dd>
+
+      <dt id="metodo-curly">Método Curly</dt>
+      <dd>
+        Rutina de cuidado del cabello rizado u ondulado que evita ingredientes que dañan, deshidratan o generan acumulación. La idea base: respetar el rizo natural usando productos sin sulfatos fuertes, sin siliconas no solubles, sin alcoholes secantes y sin derivados del petróleo. Se popularizó con el libro <em>Curly Girl: The Handbook</em> de Lorraine Massey, y en el mundo hispanohablante con cuentas como <em>Oh My Rula</em>.
+      </dd>
+
+      <dt id="sulfato">Sulfato</dt>
+      <dd>
+        Detergente de fórmula clásica usado en champús. Limpia muy bien pero arrastra los aceites naturales del cabello, lo deshidrata y abre la cutícula. Los más comunes: <code>Sodium Lauryl Sulfate (SLS)</code>, <code>Sodium Laureth Sulfate (SLES)</code>, <code>Ammonium Lauryl/Laureth Sulfate (ALS/ALES)</code>. Bajo el Método Curly están prohibidos.
+      </dd>
+
+      <dt id="sulfonato">Sulfonato</dt>
+      <dd>
+        Familia de surfactantes parecidos a los sulfatos pero técnicamente distintos (la cabeza química es <em>-SO₃</em> en vez de <em>-OSO₃</em>). El más común es <code>Sodium C14-C16 Olefin Sulfonate</code>. Algunas guías curly lo permiten, otras no: limpia parecido al SLS sin ser sulfato. En la app: aceptado en el ruleset estándar y laxo, prohibido en el estricto.
+      </dd>
+
+      <dt id="silicona">Silicona (no soluble)</dt>
+      <dd>
+        Polímeros que forman una película sobre el cabello dando brillo y suavidad inmediata. El problema: como no se disuelven en agua, se acumulan y sólo se quitan con sulfatos fuertes — un círculo vicioso. Las más comunes: <code>Dimethicone</code>, <code>Amodimethicone</code>, <code>Cyclopentasiloxane</code>, <code>Dimethiconol</code>. Prohibidas en el Método Curly estándar.
+      </dd>
+
+      <dt id="silicona-soluble">Silicona soluble (permitida)</dt>
+      <dd>
+        Algunas siliconas están modificadas para disolverse en agua y no acumularse. La regla práctica: si tiene el prefijo <code>PEG-</code> (ej. <code>Dimethicone PEG-7 Phosphate</code>) o termina en <code>Copolyol</code>, está permitida en el Método Curly estándar.
+      </dd>
+
+      <dt id="alcohol-secante">Alcohol secante</dt>
+      <dd>
+        Alcoholes de cadena corta usados como solvente o conservante. En cantidad alta deshidratan la fibra del pelo. Los típicos: <code>Alcohol Denat</code>, <code>SD Alcohol</code>, <code>Ethanol</code>, <code>Isopropyl Alcohol</code>, <code>Propanol</code>. Prohibidos en el Método Curly estándar y estricto.
+      </dd>
+
+      <dt id="alcohol-graso">Alcohol graso (permitido)</dt>
+      <dd>
+        Pese al nombre que asusta, son alcoholes de cadena larga que actúan como emolientes e hidratan. Los típicos: <code>Cetyl Alcohol</code>, <code>Cetearyl Alcohol</code>, <code>Stearyl Alcohol</code>, <code>Behenyl Alcohol</code>. Permitidos en todos los rulesets.
+      </dd>
+
+      <dt id="aceite-mineral">Aceite mineral / Petrolatum</dt>
+      <dd>
+        Derivados del petróleo que forman una capa oclusiva. No nutren la fibra, sólo la sellan, y se acumulan. Los más comunes: <code>Mineral Oil</code>, <code>Paraffinum Liquidum</code>, <code>Petrolatum</code>, <code>Paraffin Wax</code>. Prohibidos en todos los rulesets.
+      </dd>
+
+      <dt id="cera">Cera</dt>
+      <dd>
+        Las ceras animales o minerales pesadas (<code>Beeswax</code>, <code>Microcrystalline Wax</code>, <code>Ozokerite</code>) se acumulan parecido a las siliconas. Las ceras vegetales en concentración baja (<code>Candelilla Cera</code>, <code>Carnauba Wax</code>) suelen aceptarse en el ruleset estándar pero se prohíben en el estricto.
+      </dd>
+
+      <dt id="humectante">Humectante</dt>
+      <dd>
+        Ingrediente que atrae agua hacia el cabello. Los más comunes: <code>Glycerin</code> (glicerina), <code>Sodium Hyaluronate</code> (ácido hialurónico), <code>Propylene Glycol</code>, <code>Butylene Glycol</code>. Permitidos y deseables en todos los rulesets.
+      </dd>
+
+      <dt id="protein">Proteínas</dt>
+      <dd>
+        Proteínas hidrolizadas (<code>Hydrolyzed Wheat Protein</code>, <code>Hydrolyzed Vegetable Protein</code>) que reparan temporalmente la fibra dañada. Permitidas. En cabello con poca porosidad pueden generar rigidez si se usan en exceso, pero no son una contraindicación del Método Curly.
+      </dd>
+
+      <dt id="low-poo-no-poo">Low-poo / No-poo</dt>
+      <dd>
+        Dos rutinas dentro del Método Curly. <strong>Low-poo</strong>: usar champús suaves (sin sulfatos). <strong>No-poo</strong>: lavar sólo con acondicionador (co-wash) sin champú. Ambas evitan el ciclo "sulfato → silicona → sulfato".
+      </dd>
+
+      <dt id="cgm">CGM</dt>
+      <dd>
+        Sigla en inglés de <em>Curly Girl Method</em>, el nombre original del Método Curly. La versión "purista" del CGM también prohíbe siliconas solubles, parabenos y ceras. En la app eso corresponde al ruleset <strong>Estricto</strong>.
+      </dd>
+
+      <dt id="obf">Open Beauty Facts (OBF)</dt>
+      <dd>
+        Base de datos abierta y colaborativa de cosméticos, hermana de Open Food Facts. Cualquiera puede sumar productos con su código de barras y la lista de ingredientes. Curly Check usa OBF como fuente principal: cuando escaneás un barcode, la app consulta OBF y obtiene la INCI publicada por la comunidad. Sitio: <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener">world.openbeautyfacts.org</a>.
+      </dd>
+
+      <dt id="ruleset">Ruleset</dt>
+      <dd>
+        El conjunto de reglas con el que la app evalúa los productos. Curly Check trae tres:
+        <ul>
+          <li><strong>Estándar (Oh My Rula)</strong>: prohíbe sulfatos, siliconas no solubles, alcoholes secantes y aceites minerales. Es el por defecto y el más usado.</li>
+          <li><strong>Estricto (CGM purista)</strong>: lo anterior + siliconas solubles, ceras y algunos parabenos.</li>
+          <li><strong>Laxa (low-poo)</strong>: sólo prohíbe sulfatos fuertes y aceites minerales. Permite Dimethicone con la idea de combinarlo con co-wash.</li>
+        </ul>
+      </dd>
+
+      <dt id="veredicto">APTO / NO APTO / VERIFICAR</dt>
+      <dd>
+        Los tres veredictos posibles que devuelve la app:
+        <ul>
+          <li><span class="tag apto">APTO</span> No tiene ningún ingrediente prohibido por el ruleset elegido.</li>
+          <li><span class="tag no">NO APTO</span> Tiene al menos uno de los ingredientes prohibidos.</li>
+          <li><span class="tag verif">VERIFICAR</span> La INCI no se pudo leer o muchos ingredientes no se reconocieron. Revisá la etiqueta o intentá con otra foto.</li>
+        </ul>
+      </dd>
+
+      <dt id="ocr">OCR</dt>
+      <dd>
+        <em>Optical Character Recognition.</em> Tecnología que convierte una imagen con texto en texto digital. Curly Check usa <a href="https://tesseract.projectnaptha.com" target="_blank" rel="noopener">Tesseract.js</a>, que corre 100% en tu navegador (las fotos no se suben a ningún servidor). Cuanto más limpia y plana esté la foto de la etiqueta, mejor lee.
+      </dd>
+
+      <dt id="barcode">Código de barras</dt>
+      <dd>
+        Las rayas y números que vienen abajo en la mayoría de los envases. Curly Check lee EAN-13 (el estándar internacional, 13 dígitos) y UPC-A (12 dígitos). Cuando lo lee, busca el producto en Open Beauty Facts y, si está, te devuelve el veredicto sin que tengas que leer la INCI.
+      </dd>
+    </dl>
+  </main>
+
+  <footer class="foot">
+    <small>
+      Datos de productos: <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener">Open Beauty Facts</a> (CC-BY-SA) ·
+      <a href="./privacy.html">Privacidad</a> ·
+      <a href="./index.html">Volver</a>
+    </small>
+  </footer>
+</body>
+</html>

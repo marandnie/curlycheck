@@ -147,12 +147,25 @@
         <p id="ocr-product-context" class="ocr-context muted" hidden></p>
 
         <label class="ocr-pick">
-          <input type="file" id="ocr-file" accept="image/*" capture="environment" hidden />
+          <input type="file" id="ocr-file" accept="image/*" hidden />
           <span class="btn btn-primary">📷 Tomar foto / Elegir imagen</span>
         </label>
 
-        <div id="ocr-preview-wrap" class="ocr-preview-wrap" hidden>
-          <img id="ocr-preview" alt="Vista previa" />
+        <div id="ocr-crop-wrap" class="ocr-crop-wrap" hidden>
+          <p class="muted ocr-crop-help">Arrastrá el rectángulo para encuadrar la zona de ingredientes (después se recorta al leer).</p>
+          <div class="ocr-crop-stage">
+            <canvas id="ocr-canvas"></canvas>
+            <div id="ocr-crop-rect" class="ocr-crop-rect">
+              <span class="ocr-crop-handle" data-h="nw"></span>
+              <span class="ocr-crop-handle" data-h="ne"></span>
+              <span class="ocr-crop-handle" data-h="sw"></span>
+              <span class="ocr-crop-handle" data-h="se"></span>
+            </div>
+          </div>
+          <div class="ocr-crop-actions">
+            <button id="btn-ocr-fullscan" class="btn btn-ghost">Leer todo sin recortar</button>
+            <button id="btn-ocr-cropscan" class="btn btn-primary">Recortar y leer</button>
+          </div>
         </div>
 
         <div id="ocr-progress" class="ocr-progress" hidden>
@@ -215,8 +228,9 @@
 
   <footer class="foot">
     <small>
-      Datos de productos: <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener">Open Beauty Facts</a> (CC-BY-SA) ·
-      <a href="./privacy.html">Privacidad</a>
+      <a href="./glossary.html">Glosario</a> ·
+      <a href="./privacy.html">Privacidad</a> ·
+      Datos: <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener">Open Beauty Facts</a> (CC-BY-SA)
     </small>
   </footer>
 

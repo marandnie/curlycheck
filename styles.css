@@ -448,6 +448,57 @@ pre {
   border-color: var(--noapto-bg);
 }
 
+/* OCR cropper */
+.ocr-crop-wrap {
+  margin-top: 14px;
+}
+.ocr-crop-help {
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+.ocr-crop-stage {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  background: #0c1416;
+  border-radius: 10px;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.ocr-crop-stage canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.ocr-crop-rect {
+  position: absolute;
+  border: 2px solid var(--mint);
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);
+  cursor: move;
+  box-sizing: border-box;
+}
+.ocr-crop-handle {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  background: var(--mint);
+  border: 2px solid white;
+  border-radius: 50%;
+  pointer-events: auto;
+}
+.ocr-crop-handle[data-h="nw"] { top: -11px;    left: -11px;    cursor: nwse-resize; }
+.ocr-crop-handle[data-h="ne"] { top: -11px;    right: -11px;   cursor: nesw-resize; }
+.ocr-crop-handle[data-h="sw"] { bottom: -11px; left: -11px;    cursor: nesw-resize; }
+.ocr-crop-handle[data-h="se"] { bottom: -11px; right: -11px;   cursor: nwse-resize; }
+.ocr-crop-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.ocr-crop-actions .btn { flex: 1; }
+
 /* OCR auto-corrections note */
 .ocr-corrections-note {
   margin: 8px 0 0;

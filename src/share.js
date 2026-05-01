@@ -25,10 +25,16 @@ function categoryLabel(key) {
 }
 
 /**
- * Construye el texto a compartir. Recibe el objeto state.current de la app y
- * el sub-resultado de categorías (opcional).
+ * Construye el texto a compartir.
+ *
+ * @param {Object} item              state.current
+ * @param {Object} categorySummary   sub-veredictos por categoría
+ * @param {Object} opts              { includeUrl: bool } — si true, agrega la URL al final.
+ *                                   Pasar false cuando se usa con navigator.share({ url })
+ *                                   para que apps como WhatsApp no la dupliquen.
  */
-export function buildShareText(item, categorySummary) {
+export function buildShareText(item, categorySummary, opts) {
+  opts = opts || {};
   const lines = [];
   const v = item.verdict || "—";
   const head = `${emojiForVerdict(v)} ${item.name || "Producto"}${item.brand ? " · " + item.brand : ""}`;
@@ -56,8 +62,10 @@ export function buildShareText(item, categorySummary) {
     }
   }
 
-  lines.push("");
-  lines.push(`Probá Curly Check: ${APP_URL}`);
+  if (opts.includeUrl) {
+    lines.push("");
+    lines.push(`Probá Curly Check: ${APP_URL}`);
+  }
   return lines.join("\n");
 }
 
@@ -66,30 +74,34 @@ export function buildShareText(item, categorySummary) {
  * Devuelve un objeto con { method: 'share' | 'clipboard' | 'manual', text }.
  */
 export async function shareResult(item, categorySummary) {
-  const text = buildShareText(item, categorySummary);
   const title = `Curly Check · ${item.name || "Producto"}`;
+  // Para Web Share: NO incluir la URL en el text (la pasamos por separado en `url`).
+  // Apps como WhatsApp concatenan text + url y duplicarían la URL si va en ambos.
+  const textForShare = buildShareText(item, categorySummary, { includeUrl: false });
+  // Para clipboard / fallback: SÍ incluir la URL en el text (no hay campo url separado).
+  const textForCopy = buildShareText(item, categorySummary, { includeUrl: true });
 
   // 1) Web Share API
   if (navigator.share) {
     try {
-      await navigator.share({ title, text, url: APP_URL });
-      return { method: "share", text };
+      await navigator.share({ title, text: textForShare, url: APP_URL });
+      return { method: "share", text: textForShare };
     } catch (e) {
       // El usuario canceló o falló — caemos al clipboard
-      if (e.name === "AbortError") return { method: "abort", text };
+      if (e.name === "AbortError") return { method: "abort", text: textForShare };
     }
   }
 
   // 2) Clipboard API
   if (navigator.clipboard && navigator.clipboard.writeText) {
     try {
-      await navigator.clipboard.writeText(text);
-      return { method: "clipboard", text };
+      await navigator.clipboard.writeText(textForCopy);
+      return { method: "clipboard", text: textForCopy };
     } catch (e) {
       // continuar al fallback
     }
   }
 
   // 3) Manual: el caller muestra un prompt o textarea con el texto
-  return { method: "manual", text };
+  return { method: "manual", text: textForCopy };
 }

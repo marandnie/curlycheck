@@ -6,6 +6,7 @@ import { shareResult } from "./share.js";
 import { fetchByBarcode } from "./obf.js";
 import { lookupLocal } from "./local-products.js";
 import { recognize, cleanInciText } from "./ocr.js";
+import { Cropper } from "./cropper.js";
 import { correctInciText } from "./fuzzy.js";
 import { searchByName } from "./search.js";
 import * as shelf from "./shelf.js";
@@ -640,8 +641,9 @@ function escape(s) {
 // OCR view
 // ---------------------------------------------------------------------------
 const ocrFile = document.getElementById("ocr-file");
-const ocrPreviewWrap = document.getElementById("ocr-preview-wrap");
-const ocrPreview = document.getElementById("ocr-preview");
+const ocrCropWrap = document.getElementById("ocr-crop-wrap");
+const ocrCanvas = document.getElementById("ocr-canvas");
+const ocrCropRect = document.getElementById("ocr-crop-rect");
 const ocrProgress = document.getElementById("ocr-progress");
 const ocrProgressFill = document.getElementById("ocr-progress-fill");
 const ocrProgressText = document.getElementById("ocr-progress-text");
@@ -649,25 +651,32 @@ const ocrTextLabel = document.getElementById("ocr-text-label");
 const ocrText = document.getElementById("ocr-text");
 const btnOcrClassify = document.getElementById("btn-ocr-classify");
 const ocrContextEl = document.getElementById("ocr-product-context");
+const btnFullScan = document.getElementById("btn-ocr-fullscan");
+const btnCropScan = document.getElementById("btn-ocr-cropscan");
+
+let cropper = null;
 
 document.getElementById("btn-go-ocr").addEventListener("click", goToOcrFromCurrent);
 document.getElementById("btn-back-from-ocr").addEventListener("click", () => showView("scan"));
 
 function resetOcrView() {
   ocrFile.value = "";
-  ocrPreviewWrap.hidden = true;
-  ocrPreview.removeAttribute("src");
+  if (ocrCropWrap) ocrCropWrap.hidden = true;
   ocrProgress.hidden = true;
   ocrProgressFill.style.width = "0%";
   ocrProgressText.textContent = "Cargando OCR…";
   ocrTextLabel.hidden = true;
   ocrText.value = "";
   btnOcrClassify.hidden = true;
-
+  const note = document.getElementById("ocr-corrections-note");
+  if (note) { note.hidden = true; note.textContent = ""; }
   const ctx = state.ocrContext;
   if (ctx && (ctx.name || ctx.barcode)) {
     ocrContextEl.hidden = false;
-    ocrContextEl.textContent = `${ctx.name || ""}${ctx.brand ? " · " + ctx.brand : ""}${ctx.barcode ? " · " + ctx.barcode : ""}`.trim();
+    ocrContextEl.textContent =
+      (ctx.name || "") +
+      (ctx.brand ? " · " + ctx.brand : "") +
+      (ctx.barcode ? " · " + ctx.barcode : "");
   } else {
     ocrContextEl.hidden = true;
   }
@@ -676,32 +685,33 @@ function resetOcrView() {
 ocrFile.addEventListener("change", async (e) => {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
+  if (!cropper) cropper = new Cropper(ocrCanvas, ocrCropRect);
+  try {
+    await cropper.loadFile(file);
+    ocrCropWrap.hidden = false;
+    ocrProgress.hidden = true;
+    ocrTextLabel.hidden = true;
+    btnOcrClassify.hidden = true;
+    const note = document.getElementById("ocr-corrections-note");
+    if (note) { note.hidden = true; note.textContent = ""; }
+  } catch (err) {
+    alert("No se pudo cargar la imagen: " + err.message);
+  }
+});
 
-  // Preview
-  const url = URL.createObjectURL(file);
-  ocrPreview.src = url;
-  ocrPreviewWrap.hidden = false;
-
-  // Progreso
+async function runOcrOnCanvas(srcCanvas) {
+  ocrCropWrap.hidden = true;
   ocrProgress.hidden = false;
   ocrProgressFill.style.width = "0%";
   ocrProgressText.textContent = "Preparando OCR (la primera vez baja ~3 MB)…";
-  ocrTextLabel.hidden = true;
-  btnOcrClassify.hidden = true;
-
   try {
-    const { text } = await recognize(file, (m) => {
-      // m = { status, progress }
+    const { text } = await recognize(srcCanvas, (m) => {
       if (typeof m.progress === "number") {
-        ocrProgressFill.style.width = `${Math.round(m.progress * 100)}%`;
+        ocrProgressFill.style.width = Math.round(m.progress * 100) + "%";
       }
-      if (m.status) {
-        ocrProgressText.textContent = humanizeStatus(m.status);
-      }
+      if (m.status) ocrProgressText.textContent = humanizeStatus(m.status);
     });
-
     ocrProgress.hidden = true;
-    // Limpieza heurística + autocorrección contra el catálogo INCI
     const cleaned = cleanInciText(text);
     const { text: corrected, changes } = correctInciText(cleaned);
     ocrText.value = corrected;
@@ -711,13 +721,28 @@ ocrFile.addEventListener("change", async (e) => {
       const note = document.getElementById("ocr-corrections-note");
       if (note) {
         note.hidden = false;
-        note.textContent = `✨ Auto-corregimos ${changes.length} ingrediente${changes.length === 1 ? "" : "s"} (revisalos por las dudas).`;
+        note.textContent = "✨ Auto-corregimos " + changes.length +
+          " ingrediente" + (changes.length === 1 ? "" : "s") + " (revisalos por las dudas).";
       }
     }
     ocrText.focus();
   } catch (err) {
-    ocrProgressText.textContent = `Error de OCR: ${err.message}`;
+    ocrProgressText.textContent = "Error de OCR: " + err.message;
   }
+}
+
+btnCropScan.addEventListener("click", async () => {
+  if (!cropper) return;
+  const c = cropper.extractCrop();
+  if (!c) { alert("Cargá una imagen primero."); return; }
+  await runOcrOnCanvas(c);
+});
+
+btnFullScan.addEventListener("click", async () => {
+  if (!cropper) return;
+  const c = cropper.getOriginal();
+  if (!c) { alert("Cargá una imagen primero."); return; }
+  await runOcrOnCanvas(c);
 });
 
 btnOcrClassify.addEventListener("click", () => {
@@ -787,6 +812,4 @@ function renderAuthUI(user) {
 }
 
 if (authBtn) {
-  authBtn.addEventListener("click", async () => {
-    try {
-      if (auth
+  authBtn.addEventListener("click"
