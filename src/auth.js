@@ -41,9 +41,19 @@ export async function initAuth() {
 
     // Procesar redirect result si venimos de un signInWithRedirect
     try {
-      await authMod.getRedirectResult(_auth);
+      const result = await authMod.getRedirectResult(_auth);
+      if (result && result.user) {
+        console.info("[auth] redirect login OK:", result.user.email);
+      } else {
+        console.info("[auth] no pending redirect result.");
+      }
     } catch (e) {
-      console.warn("Redirect result error:", e);
+      console.error("[auth] getRedirectResult error:", e.code, e.message, e);
+      // Mostramos un alert sólo si el error es específico de auth (no ruido genérico)
+      if (e.code && e.code.startsWith("auth/")) {
+        // No alert acá — auth.js no debería tocar UI directamente. La UI lo descubre
+        // por onAuthChanged (que recibirá null) o miramos console para diagnosticar.
+      }
     }
 
     // Suscribirse a cambios de auth
@@ -60,17 +70,48 @@ export async function initAuth() {
   return initPromise;
 }
 
-/** Inicia sign-in con Google usando redirect. */
+/**
+ * Sign-in con Google. Estrategia:
+ *   1. signInWithPopup primero (más confiable en GitHub Pages + Chrome moderno
+ *      que ya bloquea third-party cookies necesarias para el redirect).
+ *   2. Si el popup está bloqueado o el navegador no lo soporta → fallback a
+ *      signInWithRedirect.
+ */
 export async function signInWithGoogle() {
   if (!FIREBASE_ENABLED) {
     throw new Error("Firebase no configurado. Mirá docs/firebase-setup.md.");
   }
   const ctx = await initAuth();
-  const { GoogleAuthProvider, signInWithRedirect } = ctx.authMod;
+  const { GoogleAuthProvider, signInWithPopup, signInWithRedirect } = ctx.authMod;
   const provider = new GoogleAuthProvider();
-  // Pedimos el email solamente (suficiente para identidad y sync)
   provider.addScope("email");
-  await signInWithRedirect(ctx.auth, provider);
+
+  try {
+    await signInWithPopup(ctx.auth, provider);
+    return;
+  } catch (e) {
+    console.warn("[auth] popup failed:", e.code, e.message);
+    // Errores que indican que el usuario simplemente canceló: no caer a redirect
+    if (
+      e.code === "auth/popup-closed-by-user" ||
+      e.code === "auth/cancelled-popup-request" ||
+      e.code === "auth/user-cancelled"
+    ) {
+      throw e;
+    }
+    // Si el popup está bloqueado o el entorno no lo soporta, intentamos redirect
+    if (
+      e.code === "auth/popup-blocked" ||
+      e.code === "auth/operation-not-supported-in-this-environment" ||
+      e.code === "auth/internal-error"
+    ) {
+      console.warn("[auth] cayendo a signInWithRedirect…");
+      await signInWithRedirect(ctx.auth, provider);
+      return;
+    }
+    // Cualquier otro error: re-lanzar para que la UI lo muestre
+    throw e;
+  }
 }
 
 /** Cierra sesión. */
