@@ -1,5 +1,4 @@
 // Motor de clasificación: parser INCI + lookup + veredicto.
-// Port de Python (curly_classifier/classifier.py) a JS.
 
 import { CATEGORIES, INGREDIENTS, RULESETS } from "./ingredients.js";
 
@@ -33,8 +32,14 @@ export function parseInci(text) {
   if (!text) return [];
   text = text.replace(/^\s*(ingredients?|ingredientes|inci)\s*[:.\-]?\s*/i, "");
   text = text.replace(/\n/g, ",").replace(/;/g, ",").replace(/·/g, ",");
+  // Proteger comas que son parte de nombres químicos (locantes numéricos como
+  // "2-Oleamido-1,3-Octadecanediol"). Las comas entre dígitos NO son separadores.
+  const PLACEHOLDER = "";
+  text = text.replace(/(\d),(\d)/g, "$1" + PLACEHOLDER + "$2");
   const tokens = text.split(",").map(function(t) {
-    return t.replace(/[ ."\t]+$/, "").replace(/^[ "\t]+/, "");
+    return t.replace(new RegExp(PLACEHOLDER, "g"), ",")
+            .replace(/[ ."\t]+$/, "")
+            .replace(/^[ "\t]+/, "");
   });
   const cleaned = [];
   for (let t of tokens) {

@@ -3,7 +3,7 @@
 //
 // Si todos los tests pasan acá Y en pytest, tenés paridad de comportamiento.
 
-import { classify } from "../src/classifier.js";
+import { classify, parseInci, lookupIngredient } from "../src/classifier.js";
 
 let passed = 0;
 let failed = 0;
@@ -111,10 +111,53 @@ test("garbage input → VERIFICAR", () => {
   assertEq(r.verdict, "VERIFICAR");
 });
 
-console.log(`\nResultados: ${passed} pasaron, ${failed} fallaron.`);
+
+// ---------------------------------------------------------------------------
+// Tests específicos de parser y aliases (bugs reportados por usuarias)
+// ---------------------------------------------------------------------------
+
+test("parser: 2-Oleamido-1,3-Octadecanediol queda como UN solo token", () => {
+  const tokens = parseInci("Aqua, 2-Oleamido-1,3-Octadecanediol, Parfum");
+  if (tokens.length !== 3) {
+    throw new Error("esperaba 3 tokens, obtuve " + tokens.length + ": " + JSON.stringify(tokens));
+  }
+  assertEq(tokens[1], "2-Oleamido-1,3-Octadecanediol");
+});
+
+test("parser: locantes numéricos no se separan (Acrylates/C10-30)", () => {
+  const tokens = parseInci("Aqua, Glycerin, 1,2-Hexanediol, Parfum");
+  assertEq(tokens.length, 4);
+  assertEq(tokens[2], "1,2-Hexanediol");
+});
+
+test("alias: Olive Fruit Oil → Olea Europaea Fruit Oil", () => {
+  const ing = lookupIngredient("Olive Fruit Oil");
+  if (!ing) throw new Error("no se reconoció Olive Fruit Oil");
+  assertEq(ing.name, "Olea Europaea Fruit Oil");
+});
+
+test("alias: Jojoba Seed Oil → Simmondsia Chinensis Seed Oil", () => {
+  const ing = lookupIngredient("Jojoba Seed Oil");
+  if (!ing) throw new Error("no se reconoció Jojoba Seed Oil");
+  assertEq(ing.name, "Simmondsia Chinensis Seed Oil");
+});
+
+test("clasificar INCI con 2-Oleamido-1,3-Octadecanediol no rompe", () => {
+  // Este string es similar al que reportó Marina con Huile Sublime Repair
+  const inci = "Helianthus Annuus Seed Oil, Olive Fruit Oil, Jojoba Seed Oil, " +
+               "Glycerin, 2-Oleamido-1,3-Octadecanediol, Parfum";
+  const r = classify(inci, "standard");
+  assertEq(r.verdict, "APTO");
+  // Y los 6 ingredientes deben estar reconocidos (0 unknown)
+  if (r.unknown.length > 0) {
+    throw new Error("ingredientes no reconocidos: " + JSON.stringify(r.unknown));
+  }
+});
+
+console.log("\nTotal: " + passed + " pasaron, " + failed + " fallaron.");
 if (failed > 0) {
-  console.log("\nFallas:");
-  failures.forEach((f) => console.log(`  ✗ ${f.name}: ${f.error}`));
+  console.log("Fallas:");
+  failures.forEach((f) => console.log("  ✗ " + f.name + ": " + f.error));
   process.exit(1);
 }
 process.exit(0);

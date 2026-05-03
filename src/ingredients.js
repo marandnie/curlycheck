@@ -99,11 +99,11 @@ export const INGREDIENTS = [
 
   // --- Aceites vegetales ---
   { name: "Cocos Nucifera Oil", category: C.NATURAL_OIL, aliases: ["Coconut Oil", "Aceite de Coco"], severity: "allowed" },
-  { name: "Olea Europaea Fruit Oil", category: C.NATURAL_OIL, aliases: ["Olive Oil"], severity: "allowed" },
-  { name: "Helianthus Annuus Seed Oil", category: C.NATURAL_OIL, aliases: ["Sunflower Seed Oil"], severity: "allowed" },
-  { name: "Simmondsia Chinensis Seed Oil", category: C.NATURAL_OIL, aliases: ["Jojoba Oil"], severity: "allowed" },
+  { name: "Olea Europaea Fruit Oil", category: C.NATURAL_OIL, aliases: ["Olive Oil", "Olive Fruit Oil", "Aceite de Oliva"], severity: "allowed" },
+  { name: "Helianthus Annuus Seed Oil", category: C.NATURAL_OIL, aliases: ["Sunflower Seed Oil", "Sunflower Oil", "Aceite de Girasol"], severity: "allowed" },
+  { name: "Simmondsia Chinensis Seed Oil", category: C.NATURAL_OIL, aliases: ["Jojoba Oil", "Jojoba Seed Oil", "Aceite de Jojoba"], severity: "allowed" },
   { name: "Argania Spinosa Kernel Oil", category: C.NATURAL_OIL, aliases: ["Argan Oil"], severity: "allowed" },
-  { name: "Glycine Soja Oil", category: C.NATURAL_OIL, aliases: ["Soybean Oil"], severity: "allowed" },
+  { name: "Glycine Soja Oil", category: C.NATURAL_OIL, aliases: ["Soybean Oil", "Soya Bean Oil", "Aceite de Soja"], severity: "allowed" },
   { name: "Butyrospermum Parkii Butter", category: C.NATURAL_OIL, aliases: ["Shea Butter", "Manteca de Karité"], severity: "allowed" },
   { name: "Shorea Robusta Seed Butter", category: C.NATURAL_OIL, severity: "allowed" },
   { name: "Caprylic/Capric Triglyceride", category: C.NATURAL_OIL, severity: "allowed" },
