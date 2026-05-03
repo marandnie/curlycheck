@@ -3,6 +3,7 @@
 
 import { classify, categorySummary, VERDICT } from "./classifier.js";
 import { shareResult } from "./share.js";
+import * as telemetry from "./telemetry.js";
 import { fetchByBarcode } from "./obf.js";
 import { lookupLocal } from "./local-products.js";
 import { recognize, cleanInciText } from "./ocr.js";
@@ -444,6 +445,9 @@ function renderResult(r) {
 
   // Sub-veredictos por categoría
   renderCategoryChips(r);
+
+  // Telemetría anónima (opt-out, fire-and-forget)
+  telemetry.recordScan(r);
 
   showView("result");
 }
@@ -915,6 +919,31 @@ if (FIREBASE_ENABLED) {
   });
 } else {
   renderAuthUI(null);
+}
+
+// ---------------------------------------------------------------------------
+// Toggle de telemetría en el footer
+// ---------------------------------------------------------------------------
+const telemetryLink = document.getElementById("telemetry-toggle");
+const telemetryState = document.getElementById("telemetry-state");
+
+function updateTelemetryUI() {
+  if (!telemetryState) return;
+  telemetryState.textContent = telemetry.isEnabled() ? "on" : "off";
+}
+updateTelemetryUI();
+
+if (telemetryLink) {
+  telemetryLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    const next = !telemetry.isEnabled();
+    telemetry.setEnabled(next);
+    updateTelemetryUI();
+    alert(next
+      ? "Telemetría anónima ACTIVADA. Compartís barcode + ingredientes no reconocidos para mejorar la app. Sin uid ni datos personales."
+      : "Telemetría anónima DESACTIVADA. No se enviará nada al servidor."
+    );
+  });
 }
 
 // ---------------------------------------------------------------------------

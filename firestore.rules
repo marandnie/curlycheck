@@ -1,27 +1,41 @@
 rules_version = '2';
 
 // Reglas de Firestore para Curly Check.
-// Cada usuaria solo puede leer/escribir su propia data en users/{uid}/...
+// - Estantería: cada usuaria solo puede leer/escribir su propia data en users/{uid}/...
+// - Telemetría anónima: cualquier visitante puede CREAR documentos con esquema
+//   validado. Lectura/edición/borrado prohibidos desde el cliente
+//   (la admin lee desde Firebase Console).
 //
-// Para deployar estas reglas:
+// Para deployar:
 //   firebase deploy --only firestore:rules
 // O pegarlas en Firebase Console > Firestore > Rules.
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Documento del perfil del usuario
+
+    // ───────────── Estantería de usuarias ─────────────
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
 
-      // Subcolección de la estantería del usuario
       match /shelf/{itemId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
-      // Cualquier subcolección futura del usuario hereda la misma regla
       match /{collection}/{docId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+    }
+
+    // ───────────── Telemetría anónima (opt-out) ─────────────
+    // Permitimos crear documentos sin auth pero con esquema estricto para
+    // evitar abuso. No se permite leer ni borrar desde el cliente.
+    match /telemetry/scans/events/{eventId} {
+      allow create: if isValidScan(request.resource.data);
+      allow read, update, delete: if false;
+    }
+    match /telemetry/contributions/events/{eventId} {
+      allow create: if isValidContribution(request.resource.data);
+      allow read, update, delete: if false;
     }
 
     // Bloqueamos todo lo demás por defecto
@@ -29,4 +43,29 @@ service cloud.firestore {
       allow read, write: if false;
     }
   }
+}
+
+// ───────────── Validadores de esquema ─────────────
+function isValidScan(d) {
+  return d.keys().hasOnly([
+        'barcode', 'name', 'brand', 'verdict', 'ruleset',
+        'source', 'unknownIngredients', 'dayBucket', 'appVersion'
+      ])
+      && d.barcode is string && d.barcode.size() <= 64
+      && d.name is string && d.name.size() <= 200
+      && d.brand is string && d.brand.size() <= 100
+      && d.verdict is string && d.verdict.size() <= 32
+      && d.ruleset is string && d.ruleset.size() <= 80
+      && d.source is string && d.source.size() <= 80
+      && d.unknownIngredients is list && d.unknownIngredients.size() <= 50
+      && d.dayBucket is string && d.dayBucket.size() <= 16
+      && d.appVersion is string && d.appVersion.size() <= 16;
+}
+
+function isValidContribution(d) {
+  return d.keys().hasOnly(['barcode', 'name', 'dayBucket', 'appVersion'])
+      && d.barcode is string && d.barcode.size() <= 64
+      && d.name is string && d.name.size() <= 200
+      && d.dayBucket is string && d.dayBucket.size() <= 16
+      && d.appVersion is string && d.appVersion.size() <= 16;
 }

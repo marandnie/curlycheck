@@ -228,6 +228,19 @@ export const INGREDIENTS = [
   { name: "Glyceryl Oleate", category: C.OTHER, severity: "allowed" },
   { name: "Potassium Sorbate", category: C.PRESERVATIVE, severity: "allowed" },
   { name: "Oryza Sativa Extract", category: C.OTHER, aliases: ["Rice Extract"], severity: "allowed" },
+
+  // --- Nuevos: aminoácidos, conservantes y colorantes (sumados según productos escaneados) ---
+  { name: "Sodium Phosphate", category: C.OTHER, severity: "allowed" },
+  { name: "Lactose", category: C.HUMECTANT, aliases: ["Lactosa"], severity: "allowed" },
+  { name: "Alanine", category: C.OTHER, aliases: ["L-Alanine"], severity: "allowed" },
+  { name: "Glycoproteins", category: C.PROTEIN, aliases: ["Glicoproteínas"], severity: "allowed" },
+  { name: "Glycosaminoglycans", category: C.HUMECTANT, aliases: ["GAGs"], severity: "allowed" },
+  { name: "Imidazolidinyl Urea", category: C.PRESERVATIVE, severity: "low" },
+  { name: "Diazolidinyl Urea", category: C.PRESERVATIVE, severity: "low" },
+  { name: "Iodopropynyl Butylcarbamate", category: C.PRESERVATIVE, aliases: ["IPBC"], severity: "allowed" },
+  { name: "CI 17200", category: C.OTHER, aliases: ["D&C Red 33", "DandC Red 33"], severity: "allowed" },
+  { name: "Aminopropyl Phenyl Trimethicone", category: C.SILICONE_INSOLUBLE, severity: "high" },
+
 ];
 
 export const RULESETS = {

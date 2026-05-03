@@ -42,6 +42,7 @@
       <li>Si iniciás sesión con Google, sincronizamos tu estantería en Firebase Firestore atada a tu cuenta. Sólo vos podés leerla o modificarla.</li>
       <li>Las consultas a Open Beauty Facts viajan directo desde tu navegador a sus servidores; no pasan por nosotros.</li>
       <li>Las fotos que tomás para OCR se procesan 100% en tu navegador con Tesseract.js. Nunca se suben a ningún servidor.</li>
+      <li>Recolectamos <strong>telemetría anónima</strong> (barcode, veredicto, ingredientes no reconocidos) para mejorar la base de la app. <strong>Sin asociación a tu identidad</strong>. Podés desactivarla con un click desde el footer.</li>
     </ul>
 
     <h2>Datos que recolectamos</h2>
@@ -62,7 +63,21 @@
     </ul>
     <p>Las reglas de seguridad de Firestore garantizan que sólo vos (autenticada con tu cuenta) podés leer o modificar tu propia data. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Política de privacidad de Google</a>.</p>
 
-    <h3>3. Cámara, fotos y OCR</h3>
+    <h3>3. Telemetría anónima de productos (opt-out)</h3>
+    <p>Cuando escaneás un producto y la app calcula un veredicto, enviamos a nuestra base de datos los siguientes datos:</p>
+    <ul>
+      <li>Código de barras del producto (si lo escaneaste).</li>
+      <li>Nombre y marca del producto.</li>
+      <li>Veredicto resultante (APTO / NO APTO / VERIFICAR) y ruleset usado.</li>
+      <li>Lista de ingredientes que la app no reconoció (para detectar gaps en el catálogo).</li>
+      <li>Fuente del scan: barcode, OCR, búsqueda o ingreso manual.</li>
+      <li>Día (sin hora exacta) y versión de la app.</li>
+    </ul>
+    <p><strong>No se asocia a tu cuenta ni a tu identidad.</strong> No enviamos UID, email, dirección IP, ni timestamp preciso. Las reglas de Firestore impiden que cualquier cliente (incluyendo el tuyo) pueda leer estos datos — sólo el equipo de la app accede al agregado desde Firebase Console.</p>
+    <p><strong>Para qué lo usamos:</strong> mejorar el catálogo de ingredientes (sumar los que no reconocemos), entender qué productos son más populares, y priorizar qué productos contribuir a Open Beauty Facts.</p>
+    <p><strong>Cómo desactivarla:</strong> tocá el link <em>"Telemetría: on"</em> en el footer de la app. Pasa a <em>"off"</em> y deja de enviar nada inmediatamente.</p>
+
+    <h3>4. Cámara, fotos y OCR</h3>
     <p>La app pide acceso a la cámara para:</p>
     <ul>
       <li>Leer códigos de barras (los códigos detectados nunca se envían a un servidor — sólo se usan para consultar Open Beauty Facts).</li>
@@ -70,7 +85,7 @@
     </ul>
     <p>Las fotos se procesan en tu navegador con Tesseract.js (una librería que corre en JavaScript, sin servidor). <strong>Las imágenes no se suben a ningún lado y se descartan apenas se extrae el texto.</strong></p>
 
-    <h3>4. Datos de productos: Open Beauty Facts</h3>
+    <h3>5. Datos de productos: Open Beauty Facts</h3>
     <p>Cuando consultamos información de un producto por su código de barras, hacemos una solicitud directa desde tu navegador a la API de <a href="https://world.openbeautyfacts.org" target="_blank" rel="noopener">Open Beauty Facts</a>. Open Beauty Facts es un proyecto de datos abiertos. Su política de privacidad aplica a esa interacción.</p>
 
     <h2>Cookies y tracking</h2>
