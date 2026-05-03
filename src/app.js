@@ -863,4 +863,57 @@ function renderAuthUI(user) {
 }
 
 if (authBtn) {
-  authBtn.addEventListener("click"
+  authBtn.addEventListener("click", async () => {
+    try {
+      if (authBtn.dataset.action === "signout") {
+        await signOut();
+      } else {
+        await signInWithGoogle();
+      }
+    } catch (e) {
+      alert("Error de auth: " + e.message);
+    }
+  });
+}
+
+async function maybeOfferMigration() {
+  const localCount = shelf.localCount();
+  if (!localCount) return;
+  const ok = confirm(
+    `Tenés ${localCount} producto${localCount === 1 ? "" : "s"} guardado${localCount === 1 ? "" : "s"} en este dispositivo. ¿Querés sincronizarlos con tu cuenta para verlos en cualquier dispositivo?`,
+  );
+  if (!ok) return;
+  try {
+    const { migrated } = await shelf.migrateLocalToCloud({ clearAfter: true });
+    alert(`Listo, sincronizamos ${migrated} producto${migrated === 1 ? "" : "s"} a tu cuenta.`);
+    if (state.view === "shelf") renderShelf();
+  } catch (e) {
+    alert("No se pudo sincronizar: " + e.message);
+  }
+}
+
+// Init auth + listener
+if (FIREBASE_ENABLED) {
+  initAuth().catch((e) => console.warn("initAuth error:", e));
+  let prevUser = null;
+  onAuthChanged((user) => {
+    const wasNotLogged = !prevUser;
+    prevUser = user;
+    renderAuthUI(user);
+    if (state.view === "shelf") renderShelf();
+    if (user && wasNotLogged) maybeOfferMigration();
+  });
+} else {
+  renderAuthUI(null);
+}
+
+// ---------------------------------------------------------------------------
+// Service worker
+// ---------------------------------------------------------------------------
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js").catch((e) => {
+      console.warn("SW register failed", e);
+    });
+  });
+}
