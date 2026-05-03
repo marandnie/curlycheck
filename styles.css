@@ -79,6 +79,16 @@ a { color: var(--mint-dark); }
   border-radius: 50%;
   object-fit: cover;
 }
+.auth-status .avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mint);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
 .auth-status .auth-email {
   max-width: 130px;
   overflow: hidden;

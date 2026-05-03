@@ -832,6 +832,14 @@ function humanizeStatus(s) {
   return map[s] || s;
 }
 
+function initials(name) {
+  if (!name) return "?";
+  const parts = String(name).trim().split(/[\s.@]+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
 // ---------------------------------------------------------------------------
 // Auth UI (botón login + avatar en topbar)
 // ---------------------------------------------------------------------------
@@ -850,7 +858,9 @@ function renderAuthUI(user) {
     authBtn.hidden = false;
     authStatus.hidden = false;
     authStatus.innerHTML = `
-      ${user.photoURL ? `<img class="avatar" src="${user.photoURL}" alt="">` : ""}
+      ${user.photoURL
+        ? `<img class="avatar" src="${user.photoURL}" alt="" referrerpolicy="no-referrer" crossorigin="anonymous" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'avatar avatar-fallback',textContent:'${escape(initials(user.displayName || user.email || ''))}'}))">`
+        : `<span class="avatar avatar-fallback">${escape(initials(user.displayName || user.email || ""))}</span>`}
       <span class="auth-email">${escape(user.displayName || user.email || "Conectada")}</span>
     `;
   } else {
