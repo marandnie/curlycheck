@@ -241,6 +241,37 @@ export const INGREDIENTS = [
   { name: "CI 17200", category: C.OTHER, aliases: ["D&C Red 33", "DandC Red 33"], severity: "allowed" },
   { name: "Aminopropyl Phenyl Trimethicone", category: C.SILICONE_INSOLUBLE, severity: "high" },
 
+
+  // --- Aceites vegetales adicionales ---
+  { name: "Ricinus Communis Seed Oil", category: C.NATURAL_OIL, aliases: ["Castor Oil", "Aceite de Ricino", "Ricinus Communis (Castor) Seed Oil"], severity: "allowed" },
+  { name: "Linum Usitatissimum Seed Oil", category: C.NATURAL_OIL, aliases: ["Flax Seed Oil", "Linseed Oil", "Aceite de Lino", "Linum Usitatissimum Flower Extract"], severity: "allowed" },
+
+  // --- Extractos botánicos ---
+  { name: "Chamomilla Recutita Extract", category: C.OTHER, aliases: ["Matricaria Flower Extract", "Manzanilla Extract", "Chamomilla Recutita Flower Extract", "Chamomile Extract"], severity: "allowed" },
+  { name: "Nelumbium Speciosum Extract", category: C.OTHER, aliases: ["Nelumbium Speciosum Flower Extract", "Lotus Flower Extract", "Loto"], severity: "allowed" },
+  { name: "Gardenia Tahitensis Flower Extract", category: C.OTHER, aliases: ["Gardena Tahitensis Flower Extract", "Tiare Flower Extract", "Tiare"], severity: "allowed" },
+
+  // --- Activos / vitaminas ---
+  { name: "Bisabolol", category: C.OTHER, aliases: ["Alpha-Bisabolol"], severity: "allowed" },
+  { name: "Panthenol", category: C.HUMECTANT, aliases: ["Vitamin B5", "Provitamin B5", "DL-Panthenol"], severity: "allowed" },
+  { name: "Tocopheryl Acetate", category: C.OTHER, aliases: ["Vitamin E Acetate"], severity: "allowed" },
+
+  // --- Fragancias adicionales ---
+  { name: "Cinnamal", category: C.FRAGRANCE, aliases: ["Cinnamaldehyde"], severity: "allowed" },
+  { name: "Hexamethylindanopyran", category: C.FRAGRANCE, aliases: ["Galaxolide"], severity: "allowed" },
+  { name: "Terpineol", category: C.FRAGRANCE, severity: "allowed" },
+  { name: "Tetramethyl Acetyloctahydronaphtalenes", category: C.FRAGRANCE, aliases: ["Iso E Super"], severity: "allowed" },
+  { name: "Linalyl Acetate", category: C.FRAGRANCE, severity: "allowed" },
+  { name: "Vanillin", category: C.FRAGRANCE, severity: "allowed" },
+
+  // --- Colorantes adicionales ---
+  { name: "CI 19140", category: C.OTHER, aliases: ["Cl 19140", "FD&C Yellow 5", "Tartrazine"], severity: "allowed" },
+
+  // --- Aliases para el INCI canónico Caprylic/Capric Triglyceride
+  // (cuando aparece como dos tokens partidos en la etiqueta) ---
+  { name: "Caprylic Triglyceride", category: C.NATURAL_OIL, severity: "allowed" },
+  { name: "Capric Triglyceride", category: C.NATURAL_OIL, severity: "allowed" },
+
 ];
 
 export const RULESETS = {
