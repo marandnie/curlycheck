@@ -64,6 +64,33 @@ test("correctInciText corrige varios y preserva los buenos", () => {
   assertEq(changes.length >= 2, true, "debería reportar 2+ cambios");
 });
 
+// Regresión: correctInciText NO debe partir locantes numéricos por coma
+// (bug previo: "2-Oleamido-1,3-Octadecanediol" se rompía en dos tokens).
+test("correctInciText preserva locantes numéricos: 2-Oleamido-1,3-Octadecanediol", () => {
+  const inci = "Aqua, Sodum Lawreth Sulfate, 2-Oleamido-1,3-Octadecanediol, Parfum";
+  const { text } = correctInciText(inci);
+  if (!text.includes("2-Oleamido-1,3-Octadecanediol")) {
+    throw new Error("locante numérico fue partido: " + text);
+  }
+  if (!text.includes("Sodium Laureth Sulfate")) {
+    throw new Error("no corrigió SLS: " + text);
+  }
+});
+
+test("correctInciText preserva locantes numéricos: 1,2-Hexanediol", () => {
+  const { text } = correctInciText("Aqua, Glycerin, 1,2-Hexanediol, Parfum");
+  if (!text.includes("1,2-Hexanediol")) {
+    throw new Error("locante 1,2- fue partido: " + text);
+  }
+});
+
+test("correctInciText también normaliza ; y · → ,", () => {
+  const { text } = correctInciText("Aqua; Glycerin · Parfum");
+  if (!text.match(/Aqua,\s*Glycerin,\s*Parfum/)) {
+    throw new Error("no normalizó separadores: " + text);
+  }
+});
+
 console.log(`\nFuzzy: ${passed} pasaron, ${failed} fallaron.`);
 if (failed > 0) {
   console.log("Fallas:");

@@ -36,7 +36,18 @@ const LOT_CODE_PATTERN = /^(FIL|LOT|BATCH|REF|N°|N\.|NRO|LOTE)\s*[\w\-\.]+$/i;
 // (ej. "2-Oleamido-1,3-Octadecanediol")
 const COMMA_PLACEHOLDER = "<<COMMA>>";
 
-export function parseInci(text) {
+/**
+ * Splittea un texto INCI en tokens preservando las comas internas de los
+ * locantes numéricos (1,2-Hexanediol, 2-Oleamido-1,3-Octadecanediol, etc.).
+ * También normaliza separadores (`;`, `·`, saltos de línea → `,`) y descarta
+ * un prefijo tipo "Ingredients:" si aparece. NO filtra códigos de lote ni
+ * resuelve slashes — es el "split crudo" que `parseInci` y `correctInciText`
+ * comparten para no divergir en el manejo de comas.
+ *
+ * @param {string} text
+ * @returns {string[]} tokens trimmeados (puede contener strings vacías filtradas)
+ */
+export function splitInciTokens(text) {
   if (!text) return [];
   text = text.replace(/^\s*(ingredients?|ingredientes|inci)\s*[:.\-]?\s*/i, "");
   text = text.replace(/\n/g, ",").replace(/;/g, ",").replace(/·/g, ",");
@@ -46,9 +57,13 @@ export function parseInci(text) {
             .replace(/[ ."\t]+$/, "")
             .replace(/^[ "\t]+/, "");
   });
+  return tokens.filter(function(t) { return t.length > 0; });
+}
+
+export function parseInci(text) {
+  const tokens = splitInciTokens(text);
   const cleaned = [];
   for (let t of tokens) {
-    if (!t) continue;
     if (LOT_CODE_PATTERN.test(t.trim())) continue;
     if (t.includes("/")) {
       const parts = t.split("/").map(function(p) { return p.trim(); }).filter(Boolean);

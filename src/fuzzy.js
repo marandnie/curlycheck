@@ -10,6 +10,7 @@
 //      (max(1, length / 6) para tokens largos, 1 para cortos).
 
 import { INGREDIENTS } from "./ingredients.js";
+import { splitInciTokens } from "./classifier.js";
 
 // ---------------------------------------------------------------------------
 // Levenshtein iterativo con dos filas (O(n*m), memoria O(n))
@@ -120,10 +121,14 @@ function getCanonical(normalized) {
 /**
  * Aplica fuzzy correction a una INCI completa. Devuelve el texto corregido
  * + lista de cambios aplicados (para mostrarle al usuario qué se autocorrigió).
+ *
+ * Usa `splitInciTokens` del classifier para preservar comas internas de
+ * locantes numéricos (ej. "2-Oleamido-1,3-Octadecanediol"); de lo contrario
+ * un split naïve por coma rompería el ingrediente en dos tokens desconocidos.
  */
 export function correctInciText(text) {
   if (!text) return { text: "", changes: [] };
-  const tokens = text.split(",").map((t) => t.trim());
+  const tokens = splitInciTokens(text);
   const out = [];
   const changes = [];
   for (const raw of tokens) {

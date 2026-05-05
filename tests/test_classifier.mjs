@@ -142,6 +142,25 @@ test("alias: Jojoba Seed Oil → Simmondsia Chinensis Seed Oil", () => {
   assertEq(ing.name, "Simmondsia Chinensis Seed Oil");
 });
 
+// Regresión: el flujo OCR aplica `correctInciText` antes de `classify`.
+// Antes, el split naïve por coma de fuzzy partía "2-Oleamido-1,3-Octadecanediol"
+// en dos tokens desconocidos y el ratio de unknowns podía cruzar el umbral
+// y forzar VERIFICAR aún cuando el producto es APTO.
+test("flujo OCR + fuzzy: locantes numéricos no se rompen tras corrección", async () => {
+  const { correctInciText } = await import("../src/fuzzy.js");
+  const orig = "Aqua/Water, Cetearyl Alcohol, Helianthus Annuus Seed Oil, Glycerin, " +
+               "Hydroxypropyl Guar, Stearamidopropyl Dimethylamine, Cetyl Esters, " +
+               "Caprylyl Glycol, Glyceryl Stearate, Salicylic Acid, Benzyl Salicylate, " +
+               "Linalool, Benzyl Alcohol, Tartaric Acid, Mel Extract, " +
+               "2-Oleamido-1,3-Octadecanediol, Citric Acid, Parfum";
+  const corrected = correctInciText(orig).text;
+  const r = classify(corrected, "standard");
+  assertEq(r.verdict, "APTO", "post-fuzzy debe seguir APTO");
+  if (r.unknown.length > 0) {
+    throw new Error("post-fuzzy hay tokens unknown: " + JSON.stringify(r.unknown));
+  }
+});
+
 test("clasificar INCI con 2-Oleamido-1,3-Octadecanediol no rompe", () => {
   // Este string es similar al que reportó Marina con Huile Sublime Repair
   const inci = "Helianthus Annuus Seed Oil, Olive Fruit Oil, Jojoba Seed Oil, " +
