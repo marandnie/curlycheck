@@ -695,7 +695,12 @@ function escape(s) {
 // ---------------------------------------------------------------------------
 // OCR view
 // ---------------------------------------------------------------------------
-const ocrFile = document.getElementById("ocr-file");
+// Tenemos dos inputs separados: cámara (con `capture`) y galería. Los manejamos
+// como un array para evitar duplicar la lógica de change/reset.
+const ocrFileInputs = [
+  document.getElementById("ocr-file-camera"),
+  document.getElementById("ocr-file-gallery"),
+].filter(Boolean);
 const ocrCropWrap = document.getElementById("ocr-crop-wrap");
 const ocrCanvas = document.getElementById("ocr-canvas");
 const ocrCropRect = document.getElementById("ocr-crop-rect");
@@ -715,7 +720,7 @@ document.getElementById("btn-go-ocr").addEventListener("click", goToOcrFromCurre
 document.getElementById("btn-back-from-ocr").addEventListener("click", () => showView("scan"));
 
 function resetOcrView() {
-  ocrFile.value = "";
+  ocrFileInputs.forEach((el) => { el.value = ""; });
   if (ocrCropWrap) ocrCropWrap.hidden = true;
   ocrProgress.hidden = true;
   ocrProgressFill.style.width = "0%";
@@ -737,13 +742,17 @@ function resetOcrView() {
   }
 }
 
-ocrFile.addEventListener("change", async (e) => {
+async function onOcrFileChange(e) {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
   if (!cropper) cropper = new Cropper(ocrCanvas, ocrCropRect);
   try {
-    await cropper.loadFile(file);
+    // Mostrar el wrap ANTES de loadFile: así el cropper puede medir el ancho
+    // disponible y dimensionar el canvas correctamente. Si lo hacemos al revés,
+    // stage.clientWidth = 0 y el canvas queda con buffer interno desalineado
+    // del tamaño en pantalla → el rect no corresponde con lo que se cropea.
     ocrCropWrap.hidden = false;
+    await cropper.loadFile(file);
     ocrProgress.hidden = true;
     ocrTextLabel.hidden = true;
     btnOcrClassify.hidden = true;
@@ -752,7 +761,8 @@ ocrFile.addEventListener("change", async (e) => {
   } catch (err) {
     alert("No se pudo cargar la imagen: " + err.message);
   }
-});
+}
+ocrFileInputs.forEach((el) => el.addEventListener("change", onOcrFileChange));
 
 async function runOcrOnCanvas(srcCanvas) {
   ocrCropWrap.hidden = true;

@@ -557,6 +557,16 @@ pre {
 .ocr-pick .btn {
   width: 100%;
 }
+.ocr-picks {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.ocr-picks .ocr-pick {
+  flex: 1;
+  margin-bottom: 0;
+  min-width: 0; /* permite que los botones se achiquen en pantallas chicas */
+}
 .ocr-preview-wrap {
   border-radius: 12px;
   overflow: hidden;

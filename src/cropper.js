@@ -29,9 +29,30 @@ export class Cropper {
     return img;
   }
 
+  /**
+   * Cuántos píxeles internos del canvas equivalen a un píxel CSS en pantalla.
+   * Cuando CSS achica el canvas (típico en mobile con max-width: 100%) este
+   * valor es > 1 y hay que aplicarlo para que el rect dibujado y los drags
+   * coincidan con lo que ve el usuario.
+   */
+  _displayRatio() {
+    const box = this.canvas.getBoundingClientRect();
+    if (!box.width) return 1;
+    return this.canvas.width / box.width;
+  }
+
   _render() {
     const stage = this.canvas.parentElement;
-    const maxW = Math.min(stage.clientWidth || 800, 800);
+    // stage es display: inline-block, así que su clientWidth puede ser 0
+    // hasta que tenga contenido o si el wrap está oculto. Como fallback usamos
+    // el ancho del wrap (block element) que sí refleja el viewport disponible.
+    const wrap = stage.parentElement;
+    const availW =
+      stage.clientWidth ||
+      (wrap && wrap.clientWidth) ||
+      document.documentElement.clientWidth ||
+      800;
+    const maxW = Math.min(availW, 800);
     const maxH = Math.min(window.innerHeight * 0.55, 600);
     const ratio = Math.min(maxW / this.image.naturalWidth, maxH / this.image.naturalHeight, 1);
     const w = Math.round(this.image.naturalWidth * ratio);
@@ -62,10 +83,13 @@ export class Cropper {
     // El rect se posiciona relativo al stage, no al canvas. Calculamos offset.
     const offsetX = c.left - s.left;
     const offsetY = c.top - s.top;
-    this.rectEl.style.left = (offsetX + r.x) + "px";
-    this.rectEl.style.top = (offsetY + r.y) + "px";
-    this.rectEl.style.width = r.w + "px";
-    this.rectEl.style.height = r.h + "px";
+    // r está en píxeles internos del canvas; las coords CSS pueden estar
+    // a otra escala si el canvas se mostró más chico (max-width: 100%).
+    const dr = this._displayRatio();
+    this.rectEl.style.left = (offsetX + r.x / dr) + "px";
+    this.rectEl.style.top = (offsetY + r.y / dr) + "px";
+    this.rectEl.style.width = (r.w / dr) + "px";
+    this.rectEl.style.height = (r.h / dr) + "px";
   }
 
   _bindEvents() {
@@ -97,8 +121,11 @@ export class Cropper {
     const onPointerMove = (e) => {
       if (!this._drag) return;
       e.preventDefault();
-      const dx = e.clientX - this._drag.startX;
-      const dy = e.clientY - this._drag.startY;
+      // El drag llega en píxeles CSS; los convertimos a píxeles internos del
+      // canvas para que coincida con las coords en las que vive this.rect.
+      const dr = this._displayRatio();
+      const dx = (e.clientX - this._drag.startX) * dr;
+      const dy = (e.clientY - this._drag.startY) * dr;
       const W = this.canvas.width, H = this.canvas.height;
       const minSize = 30;
       let { x, y, w, h } = this._drag.startRect;

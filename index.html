@@ -146,10 +146,16 @@
 
         <p id="ocr-product-context" class="ocr-context muted" hidden></p>
 
-        <label class="ocr-pick">
-          <input type="file" id="ocr-file" accept="image/*" hidden />
-          <span class="btn btn-primary">📷 Tomar foto / Elegir imagen</span>
-        </label>
+        <div class="ocr-picks">
+          <label class="ocr-pick">
+            <input type="file" id="ocr-file-camera" accept="image/*" capture="environment" hidden />
+            <span class="btn btn-primary">📷 Tomar foto</span>
+          </label>
+          <label class="ocr-pick">
+            <input type="file" id="ocr-file-gallery" accept="image/*" hidden />
+            <span class="btn btn-ghost">🖼️ Elegir de galería</span>
+          </label>
+        </div>
 
         <div id="ocr-crop-wrap" class="ocr-crop-wrap" hidden>
           <p class="muted ocr-crop-help">Arrastrá el rectángulo para encuadrar la zona de ingredientes (después se recorta al leer).</p>
