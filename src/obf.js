@@ -31,6 +31,22 @@ export async function fetchByBarcode(barcode) {
 }
 
 /**
+ * Construir URL para abrir el formulario "agregar/editar producto" en OBF
+ * con el barcode prellenado. OBF detecta solo si es alta o edición.
+ *
+ * lc=es para que la interfaz aparezca en español.
+ */
+export function contributeUrl(barcode) {
+  if (!barcode) return null;
+  const params = new URLSearchParams({
+    type: "add",
+    code: barcode,
+    lc: "es",
+  });
+  return `${BASE}/cgi/product.pl?${params}`;
+}
+
+/**
  * Buscar productos por nombre. Retorna array de hits ordenados por OBF.
  */
 export async function searchByName(query, pageSize = 5) {

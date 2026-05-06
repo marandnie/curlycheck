@@ -4,7 +4,7 @@
 import { classify, categorySummary, VERDICT } from "./classifier.js";
 import { shareResult } from "./share.js";
 import * as telemetry from "./telemetry.js";
-import { fetchByBarcode } from "./obf.js";
+import { fetchByBarcode, contributeUrl } from "./obf.js";
 import { lookupLocal } from "./local-products.js";
 import { recognize, cleanInciText } from "./ocr.js";
 import { Cropper } from "./cropper.js";
@@ -439,6 +439,14 @@ function renderResult(r) {
     fallback.hidden = true;
   }
 
+  // Mostrar/ocultar el bloque "Contribuir a OBF".
+  // Aparece sólo cuando tenemos barcode + INCI y el dato NO viene ya de OBF.
+  // (Si OBF ya tenía la INCI, no hay nada para contribuir.)
+  const obfBlock = document.getElementById("obf-contribute");
+  const sourceIsObf = (r.source || "").startsWith("Open Beauty Facts");
+  const canContribute = !!r.barcode && !!r.inci && !sourceIsObf;
+  obfBlock.hidden = !canContribute;
+
   // Botón "Editar": sólo si el item ya está guardado en la estantería (tiene id)
   const editBtn = document.getElementById("btn-edit-current");
   editBtn.hidden = !r.id;
@@ -718,6 +726,35 @@ let cropper = null;
 
 document.getElementById("btn-go-ocr").addEventListener("click", goToOcrFromCurrent);
 document.getElementById("btn-back-from-ocr").addEventListener("click", () => showView("scan"));
+
+// "Contribuir a OBF": copia INCI al portapapeles + abre OBF en otra pestaña.
+// El form de OBF queda con el barcode prellenado; la usuaria pega la INCI ahí.
+document.getElementById("btn-contribute-obf").addEventListener("click", async () => {
+  const c = state.current;
+  if (!c || !c.barcode || !c.inci) return;
+  const url = contributeUrl(c.barcode);
+  if (!url) return;
+
+  // Copiar INCI al portapapeles (best-effort; no bloquea el flujo si falla).
+  let copied = false;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(c.inci);
+      copied = true;
+    }
+  } catch (_) {
+    // Clipboard puede fallar en contextos sin permiso; seguimos igual.
+  }
+
+  // Abrir OBF en otra pestaña.
+  window.open(url, "_blank", "noopener,noreferrer");
+
+  // Mensaje guía (alert por simplicidad; se puede migrar a toast luego).
+  const tip = copied
+    ? "Te abrimos Open Beauty Facts en otra pestaña. La INCI ya está copiada en el portapapeles — pegala en el campo \"Lista de ingredientes\"."
+    : "Te abrimos Open Beauty Facts en otra pestaña. Copiá manualmente la INCI desde la pantalla y pegala en el campo \"Lista de ingredientes\".";
+  alert(tip);
+});
 
 function resetOcrView() {
   ocrFileInputs.forEach((el) => { el.value = ""; });
