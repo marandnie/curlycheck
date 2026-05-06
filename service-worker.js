@@ -1,7 +1,7 @@
 // Service worker simple — cache-first del shell, network-first de OBF.
 // Cambiá CACHE_VERSION cuando deployes una nueva versión para forzar refresh.
 
-const CACHE_VERSION = "curlycheck-v14";
+const CACHE_VERSION = "curlycheck-v15";
 const SCOPE = "/curlycheck/";
 const SHELL = [
   SCOPE,

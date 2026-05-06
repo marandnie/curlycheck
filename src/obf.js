@@ -38,8 +38,12 @@ export async function fetchByBarcode(barcode) {
  */
 export function contributeUrl(barcode) {
   if (!barcode) return null;
+  // type=search_or_add + action=process es el endpoint que OBF usa para "Añadir
+  // un producto": si el barcode no existe, dispara el flujo de creación tras
+  // login. type=add por sí solo devuelve 404.
   const params = new URLSearchParams({
-    type: "add",
+    type: "search_or_add",
+    action: "process",
     code: barcode,
     lc: "es",
   });
