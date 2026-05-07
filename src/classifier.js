@@ -79,6 +79,35 @@ function stripParens(s) {
   return s.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim();
 }
 
+// Helper interno: substring fallback con dos sub-estrategias para reducir
+// falsos positivos del fallback genérico anterior (`norm.includes(key)`):
+//
+//   1) Multi-word keys (≥1 espacio): containment estándar. Es seguro porque
+//      las claves con varias palabras son específicas (p.ej. "argania spinosa
+//      kernel oil" no aparece dentro de otro ingrediente que no sea ese).
+//      Útil para "Argania Spinosa Kernel Oil Bio" → Argania Spinosa Kernel Oil.
+//
+//   2) Single-word keys: sólo matchean si son la PRIMERA o ÚLTIMA palabra del
+//      token. Esto evita el bug histórico donde "Cetearyl Alcohol Stearate"
+//      → "Alcohol" (DRYING_ALCOHOL) por contener "alcohol" en el medio,
+//      mientras que sigue capturando variantes razonables como
+//      "Dimethicone Crosspolymer" → Dimethicone (silicona).
+function substringMatch(norm) {
+  const words = norm.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return null;
+  const first = words[0];
+  const last = words.length > 1 ? words[words.length - 1] : null;
+  for (const [key, ing] of INDEX.entries()) {
+    if (key.length < 6) continue;
+    if (key.includes(" ")) {
+      if (norm.includes(key)) return ing;
+    } else {
+      if (key === first || key === last) return ing;
+    }
+  }
+  return null;
+}
+
 export function lookupIngredient(token) {
   const norm = normalizeToken(token);
   if (!norm) return null;
@@ -87,13 +116,11 @@ export function lookupIngredient(token) {
   if (withoutParens && withoutParens !== norm && INDEX.has(withoutParens)) {
     return INDEX.get(withoutParens);
   }
-  for (const [key, ing] of INDEX.entries()) {
-    if (key.length >= 6 && norm.includes(key)) return ing;
-  }
+  const found = substringMatch(norm);
+  if (found) return found;
   if (withoutParens && withoutParens !== norm) {
-    for (const [key, ing] of INDEX.entries()) {
-      if (key.length >= 6 && withoutParens.includes(key)) return ing;
-    }
+    const found2 = substringMatch(withoutParens);
+    if (found2) return found2;
   }
   return null;
 }

@@ -173,6 +173,55 @@ test("clasificar INCI con 2-Oleamido-1,3-Octadecanediol no rompe", () => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Tests del substring fallback de lookupIngredient (bug 2026-05-06)
+// ---------------------------------------------------------------------------
+// Antes: el fallback `key.length >= 6 && norm.includes(key)` matcheaba
+// cualquier key del catálogo como sub-string, lo cual permitía que
+// "Methyl Alcohol Foobar" se clasificara como DRYING_ALCOHOL ("alcohol"
+// como substring central). Después: keys multi-palabra usan substring
+// estándar; keys de UNA sola palabra sólo machean si son la primera o
+// última palabra del token.
+
+test("substring: 'Methyl Alcohol Foobar' NO matchea como Alcohol/DRYING (bug)", () => {
+  const ing = lookupIngredient("Methyl Alcohol Foobar");
+  if (ing && ing.name === "Alcohol") {
+    throw new Error("falso positivo: 'Methyl Alcohol Foobar' → Alcohol/DRYING_ALCOHOL");
+  }
+});
+
+test("substring: 'Foobar Petrolatum Bazlandia' NO matchea (key en medio)", () => {
+  const ing = lookupIngredient("Foobar Petrolatum Bazlandia");
+  if (ing && ing.name === "Petrolatum") {
+    throw new Error("falso positivo: petrolatum como substring central no debe matchear");
+  }
+});
+
+test("substring: 'Argania Spinosa Kernel Oil Bio' SÍ matchea (multi-palabra)", () => {
+  const ing = lookupIngredient("Argania Spinosa Kernel Oil Bio");
+  if (!ing) throw new Error("debería matchear Argania Spinosa Kernel Oil");
+  assertEq(ing.name, "Argania Spinosa Kernel Oil");
+});
+
+test("substring: 'Dimethicone Crosspolymer' SÍ matchea (single-word al inicio)", () => {
+  const ing = lookupIngredient("Dimethicone Crosspolymer");
+  if (!ing) throw new Error("debería matchear Dimethicone como primera palabra");
+  assertEq(ing.name, "Dimethicone");
+});
+
+test("substring: 'Pure Petrolatum' SÍ matchea (single-word al final)", () => {
+  const ing = lookupIngredient("Pure Petrolatum");
+  if (!ing) throw new Error("debería matchear Petrolatum como última palabra");
+  assertEq(ing.name, "Petrolatum");
+});
+
+test("classify regresión: INCI con 'Cetearyl Alcohol Stearate' no se marca NO APTO por substring espurio", () => {
+  // Antes del fix: 'Alcohol' (DRYING) matcheaba como substring → NO APTO
+  // Después: 'Cetearyl Alcohol' (multi-word, FATTY_ALCOHOL) sigue matcheando → APTO
+  const r = classify("Aqua, Glycerin, Cetearyl Alcohol Stearate, Parfum", "standard");
+  assertEq(r.verdict, "APTO", "no debe ser NO APTO por substring espurio");
+});
+
 console.log("\nTotal: " + passed + " pasaron, " + failed + " fallaron.");
 if (failed > 0) {
   console.log("Fallas:");

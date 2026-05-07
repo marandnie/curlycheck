@@ -5,6 +5,107 @@ Las entradas más recientes van arriba.
 
 ---
 
+## 2026-05-06 — Fix: substring fallback en lookupIngredient producía falsos positivos
+
+### Problema
+`src/classifier.js` `lookupIngredient` tenía un fallback de substring matching:
+
+```js
+for (const [key, ing] of INDEX.entries()) {
+  if (key.length >= 6 && norm.includes(key)) return ing;
+}
+```
+
+Como las claves se iteran en orden de inserción y "Alcohol" (DRYING_ALCOHOL,
+length 7) está cerca del principio del catálogo, **cualquier token con la
+substring "alcohol" en el medio matcheaba como alcohol secante**, no como
+alcohol graso ni `null`. Lo mismo para `petrolatum`, `tocopherol`, etc.
+
+Casos confirmados experimentalmente con la versión previa:
+- `Cetearyl Alcohol Stearate` → `Alcohol` (DRYING_ALCOHOL) → INCI marcada NO APTO.
+- `Methyl Alcohol Foobar` → `Alcohol` (DRYING_ALCOHOL).
+- `Foobar Petrolatum Bazlandia` → `Petrolatum` (MINERAL_OIL).
+
+El bug estaba mitigado por los matches exactos del catálogo (la mayoría
+de ingredientes "X Alcohol" — Cetyl, Cetearyl, Lauryl, etc. — están listados),
+pero se manifestaba ante variantes/derivados no catalogados o errores de OCR
+que dejaban tokens "compuestos" no reconocidos exactamente. El follow-up
+quedó documentado en la entrada del 2026-05-05.
+
+### Comportamiento esperado
+El fallback debe seguir capturando casos legítimos como
+`Argania Spinosa Kernel Oil Bio` → `Argania Spinosa Kernel Oil`, sin marcar
+falsos positivos cuando una key de **una sola palabra** aparece en medio
+de un token compuesto.
+
+### Implementación
+Refactor del fallback en dos sub-estrategias:
+
+1. **Multi-word keys (≥1 espacio):** containment estándar (`norm.includes(key)`).
+   Es seguro: las claves de varias palabras son específicas y no se solapan
+   con otros ingredientes. Cubre el caso `Argania Spinosa Kernel Oil Bio`
+   y similares.
+
+2. **Single-word keys:** sólo machean si la key es **igual a la primera
+   o última palabra** del token (no en el medio). Esto permite seguir
+   capturando variantes como `Dimethicone Crosspolymer` → `Dimethicone`,
+   `Pure Petrolatum` → `Petrolatum`, pero rechaza `Methyl Alcohol Foobar`
+   y `Cetearyl Alcohol Stearate`.
+
+Extraje la lógica a un helper interno `substringMatch(norm)` que se aplica
+también al token con paréntesis stripeados, idéntico al comportamiento
+previo (sólo cambia el algoritmo interno, no la composición exterior).
+
+### Componentes afectados
+Frontend (motor de clasificación). No se tocó UI, OCR, ni backend.
+
+### Archivos modificados
+- `src/classifier.js` — nuevo helper `substringMatch`; `lookupIngredient`
+  refactorizado para usarlo. Comentarios in-source explican la heurística
+  y referencian este fix.
+- `tests/test_classifier.mjs` — 6 tests nuevos:
+  - falso positivo `Methyl Alcohol Foobar` → no Alcohol.
+  - falso positivo `Foobar Petrolatum Bazlandia` → no Petrolatum.
+  - match legítimo multi-palabra `Argania Spinosa Kernel Oil Bio`.
+  - match legítimo single-word al inicio `Dimethicone Crosspolymer`.
+  - match legítimo single-word al final `Pure Petrolatum`.
+  - regresión `classify("Cetearyl Alcohol Stearate")` ya no es NO APTO.
+
+### Tests
+- `tests/test_classifier.mjs`: **34/34** pasaron (era 28).
+- `tests/test_fuzzy.mjs`: **14/14** pasaron (sin cambios).
+- `tests/test_categories.mjs`: **8/8** pasaron (sin cambios).
+- Total: **56/56** pasan, golden set de 18 productos intacto.
+
+### Riesgo / regresiones consideradas
+- El golden set sigue verde — ninguno de los 18 productos canónicos
+  dependía del comportamiento buggeado.
+- Los matches single-word legítimos (Dimethicone Crosspolymer, etc.)
+  siguen funcionando por la regla "primera o última palabra".
+- Posible regresión teórica: tokens con la key esperada en medio
+  (ej. `Foobar Dimethicone Bazlandia`) ya no machean. En la práctica
+  esto sólo aparece en strings sintéticos / OCR muy sucio; el ratio
+  de unknowns subiría y eventualmente forzaría VERIFICAR, lo cual
+  es un fallback más seguro que el flag NO APTO espurio.
+- No hay cambios en la red, en el catálogo INCI ni en los rulesets.
+
+### Follow-ups / deuda técnica observada
+- Quedaron dos archivos vacíos `tests/_probe.mjs` y `tests/_probe2.mjs`
+  como artefactos de exploración (truncated por sync issues entre Edit
+  tool y bash workspace). No están referenciados por ningún runner pero
+  conviene removerlos cuando el sandbox lo permita.
+- `categorySummary` sigue usando `"sulfates"` como fallback bucket para
+  `extraForbidden` que no caen en CATEGORY_GROUP (queda como follow-up
+  desde 2026-05-05). Convendría agregar un chip "Otros prohibidos" o
+  mapear cada `extraForbidden` a su categoría natural (PRESERVATIVE
+  para Methylparaben, etc.).
+- El `substringMatch` ahora podría refinarse con regex de word-boundary
+  para multi-word keys también (ej. evitar que "alcohol denat" matchee
+  dentro de "alcohol denatured X"). Caso teórico no observado en datos
+  reales, baja prioridad.
+
+---
+
 ## 2026-05-05 — Fix: fuzzy correction rompía locantes numéricos en INCI
 
 ### Problema
