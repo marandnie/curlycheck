@@ -176,11 +176,16 @@ export function categorySummary(inciText, rulesetName) {
   const rs = RULESETS[rulesetName];
   if (!rs) throw new Error("Ruleset desconocido: " + rulesetName);
   const tokens = parseInci(inciText);
+  // `others` es el bucket catch-all para ingredientes en `extraForbidden`
+  // cuya categoría no encaja en ningún CATEGORY_GROUP (sulfates / silicones
+  // / alcohols / minerals). Ej: Methylparaben (PRESERVATIVE) en strict.
+  // Antes caían en "sulfates" como fallback, lo cual era UX confusa.
   const empty = {
     sulfates: { state: "na", matches: [] },
     silicones: { state: "na", matches: [] },
     alcohols: { state: "na", matches: [] },
     minerals: { state: "na", matches: [] },
+    others: { state: "na", matches: [] },
   };
   if (!tokens.length) return empty;
   const byCat = {};
@@ -208,11 +213,17 @@ export function categorySummary(inciText, rulesetName) {
       matches: filtered.map(function(m) { return m.name; }),
     };
   }
+  // Inicializar el bucket "others" antes de distribuir extraForbidden.
+  // Estado por defecto "na": sólo se renderiza si efectivamente hubo
+  // extraForbidden que no encajaron en otra categoría. No mostramos
+  // "Sin Otros prohibidos" para no agregar ruido visual.
+  summary.others = { state: "na", matches: [] };
   for (const ing of flagged) {
-    let target = "sulfates";
+    let target = null;
     for (const key of Object.keys(CATEGORY_GROUPS)) {
       if (CATEGORY_GROUPS[key].includes(ing.category)) { target = key; break; }
     }
+    if (target === null) target = "others";
     if (summary[target].state !== "present") {
       summary[target] = { state: "present", matches: [ing.name] };
     } else if (!summary[target].matches.includes(ing.name)) {

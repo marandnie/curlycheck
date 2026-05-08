@@ -5,6 +5,127 @@ Las entradas más recientes van arriba.
 
 ---
 
+## 2026-05-07 — UX: chip "Otros prohibidos" para extraForbidden ajenos a CATEGORY_GROUPS
+
+### Problema
+`categorySummary` (en `src/classifier.js`) distribuye los ingredientes
+`extraForbidden` del ruleset entre los 4 chips visibles
+(sulfates / silicones / alcohols / minerals). Cuando un `extraForbidden`
+no encajaba en ningún `CATEGORY_GROUP` — caso típico: Methylparaben
+(category PRESERVATIVE) en strict — el código caía a `target = "sulfates"`
+como fallback. Resultado: el chip "Con Sulfatos" se encendía aunque la
+INCI no tuviera ningún sulfato real, sólo un parabeno. UX confusa y
+factualmente incorrecta. Issue documentado como follow-up técnico en
+las entradas del 2026-05-05 y 2026-05-06.
+
+### Comportamiento esperado
+- `extraForbidden` cuya categoría sí está en `CATEGORY_GROUPS` (ej.
+  Mineral Oil → `minerals`) sigue yendo a su chip natural.
+- `extraForbidden` cuya categoría NO encaja en ningún grupo (parabenos,
+  fragrance flags, etc.) cae en un chip dedicado "Otros prohibidos" que
+  sólo se renderiza cuando hay matches reales — su default es `na`
+  (invisible) para no agregar ruido visual.
+- El chip "Con Sulfatos" deja de prenderse falsamente por parabenos.
+
+### Implementación
+1. **`src/classifier.js` `categorySummary`:**
+   - Agregué `others: { state: "na", matches: [] }` al objeto `empty`
+     que se devuelve para INCI vacía.
+   - Inicialicé `summary.others` antes de distribuir flagged.
+   - Cambié el fallback en el loop de `flagged`: en vez de
+     `let target = "sulfates"`, ahora `let target = null` y si después
+     del lookup en `CATEGORY_GROUPS` sigue siendo `null` lo asigno a
+     `"others"`.
+   - Comentarios in-source documentan la heurística y referencian este
+     fix.
+
+2. **`src/app.js` `renderCategoryChips`:**
+   - Agregué `others: "Otros prohibidos"` a `CAT_LABELS`.
+   - El loop de chips ahora itera 5 keys: sulfates / silicones /
+     alcohols / minerals / **others**. El short-circuit
+     `s.state === "na" → continue` ya estaba presente, así que el chip
+     "others" sólo aparece cuando hay matches.
+
+3. **`src/share.js` `buildShareText`:**
+   - Agregué `others: "Otros prohibidos"` al diccionario `categoryLabel`.
+   - El loop ahora también itera "others", con un guard explícito
+     `if (key === "others" && s !== "present") continue` para mantener
+     el comportamiento "sólo renderiza si está prendido" alineado con
+     el chip visual.
+
+No se tocaron CSS (la regla `.cat-present` existente cubre el nuevo
+chip), ni el catálogo de ingredientes, ni ninguno de los rulesets.
+
+### Componentes afectados
+Frontend: motor de clasificación + UI (chips + share text). Backend
+y telemetría intactos. El shape interno de `state.currentCategorySummary`
+gana una key (`others`); como sólo se consume vía
+`renderCategoryChips` y `buildShareText`, ambos actualizados, no hay
+otros call-sites afectados.
+
+### Archivos modificados
+- `src/classifier.js` — `categorySummary`: nuevo bucket `others`,
+  fallback `"sulfates"` reemplazado por `"others"`. Comentarios
+  documentan la decisión.
+- `src/app.js` — `CAT_LABELS` + lista de iteración del loop de chips.
+- `src/share.js` — `categoryLabel` + iteración en `buildShareText`,
+  con guard "render-only-if-present" para `others`.
+- `tests/test_categories.mjs` — 3 tests nuevos / actualizados:
+  - **Updated:** "Strict: Methylparaben" ahora afirma explícitamente
+    `r.others.state === "present"`, `Methylparaben` en `others.matches`,
+    y crítico: `r.sulfates.state === "clean"` (regresión del bug).
+  - **New:** "Standard: Mineral Oil va a 'minerals', others queda na"
+    como regresión inversa: extraForbidden que SÍ encaja en un grupo
+    sigue yendo a su grupo natural.
+  - **New:** "Crème de Jour Fondamentale: 'others' también queda na"
+    para confirmar que productos APTO no encienden el nuevo chip.
+  - "INCI vacía" extendido para chequear `r.others.state === "na"`.
+
+### Tests
+- `tests/test_categories.mjs`: **10/10** pasaron (era 8).
+- `tests/test_classifier.mjs`: **34/34** pasaron (sin cambios).
+- `tests/test_fuzzy.mjs`: **14/14** pasaron (sin cambios).
+- Total: **58/58** pasan, golden set intacto.
+
+### Riesgo / regresiones consideradas
+- El shape externo de `categorySummary` sólo agrega una key; consumidores
+  que itineren con `Object.keys` y no esperen "others" recibirán un
+  chip extra que es "na" por default — no rompe nada. Los dos consumidores
+  reales (`renderCategoryChips`, `buildShareText`) están actualizados.
+- Para `state === "present"`, `s.matches` ahora puede estar vacío en
+  los chips originales (sulfates etc.) en casos en los que antes
+  contenían un Methylparaben "ajeno". Es un comportamiento más correcto:
+  el tooltip de "Con Sulfatos" ya no muestra parabenos.
+- CSS: `.cat-present` ya estiliza el nuevo chip rojo igual que los otros,
+  no hace falta nuevo estilo.
+- Telemetría: `recordScan(r)` no consume `categorySummary`, no se ve
+  afectada.
+- Service worker / cache: ningún hash inmutable; no requiere bump del
+  cache version. Los archivos cambiados se servirán con el mismo
+  filename y el revalidate normal.
+
+### Follow-ups / deuda técnica observada
+- Quedan dos archivos vacíos `tests/_probe.mjs` y `tests/_probe2.mjs`
+  arrastrados desde el run anterior (sync issues entre Edit tool y
+  bash workspace). Siguen sin ser referenciados por ningún runner.
+  Borrarlos cuando el sandbox lo permita (low priority).
+- Sería útil mostrar tooltip / detalle del chip "Otros prohibidos"
+  con la lista de ingredientes, igual que los otros chips ya hacen
+  (`chip.title = s.matches.join(", ")` ya cubre este caso por la
+  estructura compartida — confirmado que `others.matches` se popula
+  con los nombres). No requiere cambios adicionales.
+- Posible mejora futura: extender `CATEGORY_GROUPS` para incluir
+  `PRESERVATIVE` y `FRAGRANCE` como buckets de primera clase si la
+  base de usuarios usa más rulesets que listen parabenos /
+  fragancias específicas. Por ahora "Otros prohibidos" es el catch-all
+  pragmático y cubre el universo conocido.
+- El `substringMatch` con regex de word-boundary (mencionado en el
+  follow-up del 2026-05-06) sigue pendiente; baja prioridad,
+  caso teórico sin reportes en datos reales.
+
+---
+
+
 ## 2026-05-06 — Fix: substring fallback en lookupIngredient producía falsos positivos
 
 ### Problema

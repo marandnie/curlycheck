@@ -15,6 +15,8 @@ import {
   initAuth, signInWithGoogle, signOut, onAuthChanged, getCurrentUser,
 } from "./auth.js";
 import { FIREBASE_ENABLED } from "./firebase-config.js";
+import { isAdmin } from "./admin.js";
+import { mountAdmin, unmountAdmin } from "./admin-ui.js";
 
 // ---------------------------------------------------------------------------
 // Estado
@@ -42,6 +44,16 @@ function showView(name) {
   });
   if (name !== "scan") stopCamera();
   if (name === "shelf") renderShelf();
+  if (name === "admin") {
+    // Solo entrar al admin si el user actual está autorizado.
+    if (!isAdmin(getCurrentUser())) {
+      showView("scan");
+      return;
+    }
+    mountAdmin();
+  } else {
+    unmountAdmin();
+  }
 }
 
 document.querySelectorAll(".nav-btn").forEach((b) => {
@@ -465,6 +477,7 @@ const CAT_LABELS = {
   silicones: "Siliconas",
   alcohols: "Alcohol secante",
   minerals: "Aceite mineral",
+  others: "Otros prohibidos",
 };
 
 function renderCategoryChips(r) {
@@ -481,7 +494,7 @@ function renderCategoryChips(r) {
   state.currentCategorySummary = summary;
 
   block.innerHTML = "";
-  for (const key of ["sulfates", "silicones", "alcohols", "minerals"]) {
+  for (const key of ["sulfates", "silicones", "alcohols", "minerals", "others"]) {
     const s = summary[key];
     if (!s || s.state === "na") continue;
     const chip = document.createElement("div");
@@ -961,6 +974,11 @@ if (FIREBASE_ENABLED) {
     const wasNotLogged = !prevUser;
     prevUser = user;
     renderAuthUI(user);
+    // Toggle del nav-admin: solo visible para la admin (gating por UID).
+    const navAdmin = document.getElementById("nav-admin");
+    if (navAdmin) navAdmin.hidden = !isAdmin(user);
+    // Si estaba en view-admin y se deslogeó (o no es admin), salir.
+    if (state.view === "admin" && !isAdmin(user)) showView("scan");
     if (state.view === "shelf") renderShelf();
     if (user && wasNotLogged) maybeOfferMigration();
   });

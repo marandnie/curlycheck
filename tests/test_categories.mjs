@@ -72,14 +72,37 @@ test("Strict: Candelilla wax → minerals present (waxes prohibidas en strict)",
   assertEq(r.minerals.state, "present");
 });
 
-// extraForbidden: Methylparaben en strict
-test("Strict: Methylparaben (extraForbidden) marca alguna categoría como present", () => {
+// extraForbidden: Methylparaben en strict — debe ir al bucket "others",
+// NO a sulfates (que era el fallback bug histórico). Methylparaben es
+// PRESERVATIVE y no encaja en ningún CATEGORY_GROUP.
+test("Strict: Methylparaben (extraForbidden) → bucket 'others', no contamina sulfates", () => {
   const r = categorySummary("Aqua, Glycerin, Methylparaben, Parfum", "strict");
-  // Methylparaben no está en CATEGORY_GROUPS — debería caer en sulfates por defecto
-  // Lo único que importa: que ALGUNA categoría haya quedado present
-  const anyPresent = ["sulfates", "silicones", "alcohols", "minerals"]
-    .some((k) => r[k].state === "present");
-  if (!anyPresent) throw new Error("Methylparaben en strict no marcó nada como present");
+  assertEq(r.others.state, "present", "Methylparaben debería marcar 'others' como present");
+  if (!r.others.matches.includes("Methylparaben")) {
+    throw new Error("falta Methylparaben en others.matches: " + JSON.stringify(r.others.matches));
+  }
+  // Crítico: NO debe contaminar sulfates (el bug original)
+  assertEq(r.sulfates.state, "clean", "sulfates no debería marcarse present por un parabeno");
+});
+
+// Regresión: cuando un extraForbidden SÍ encaja en un CATEGORY_GROUP,
+// debe ir ahí (no a 'others').
+test("Standard: Mineral Oil va a 'minerals', others queda na", () => {
+  const r = categorySummary("Aqua, Mineral Oil, Glycerin", "standard");
+  assertEq(r.minerals.state, "present");
+  if (!r.minerals.matches.includes("Mineral Oil")) {
+    throw new Error("falta Mineral Oil en minerals.matches");
+  }
+  assertEq(r.others.state, "na", "others debería quedar na cuando todo encaja en categorías propias");
+});
+
+// Crème de Jour Fondamentale: validar 'others' na (no hay extraForbidden ajenos)
+test("Crème de Jour Fondamentale: 'others' también queda na (sin extraForbidden ajenos)", () => {
+  const r = categorySummary(
+    "Aqua/Water, Glycerin, Cetearyl Alcohol, Helianthus Annuus Seed Oil, Hydroxypropyl Guar, Stearamidopropyl Dimethylamine, Cetyl Esters, Caprylyl Glycol, Glyceryl Stearate, Salicylic Acid, Benzyl Salicylate, Linalool, Benzyl Alcohol, Tartaric Acid, Mel Extract, Citric Acid, Parfum.",
+    "standard",
+  );
+  assertEq(r.others.state, "na");
 });
 
 // Lenient: alcoholes secantes NO están en forbiddenCategories → "na"
@@ -89,10 +112,11 @@ test("Lenient: alcohols categoría → na (no es forbidden en lenient)", () => {
 });
 
 // INCI vacía
-test("INCI vacía → todo na", () => {
+test("INCI vacía → todo na (incluyendo 'others')", () => {
   const r = categorySummary("", "standard");
   assertEq(r.sulfates.state, "na");
   assertEq(r.silicones.state, "na");
+  assertEq(r.others.state, "na");
 });
 
 console.log(`\nCategories: ${passed} pasaron, ${failed} fallaron.`);

@@ -3,8 +3,8 @@ rules_version = '2';
 // Reglas de Firestore para Curly Check.
 // - Estantería: cada usuaria solo puede leer/escribir su propia data en users/{uid}/...
 // - Telemetría anónima: cualquier visitante puede CREAR documentos con esquema
-//   validado. Lectura/edición/borrado prohibidos desde el cliente
-//   (la admin lee desde Firebase Console).
+//   validado. Solo la admin (UID hardcodeado en isAdmin()) puede leer.
+// - Admin: solo la admin puede leer/escribir admin/scans/items/*.
 //
 // Para deployar:
 //   firebase deploy --only firestore:rules
@@ -28,14 +28,25 @@ service cloud.firestore {
 
     // ───────────── Telemetría anónima (opt-out) ─────────────
     // Permitimos crear documentos sin auth pero con esquema estricto para
-    // evitar abuso. No se permite leer ni borrar desde el cliente.
+    // evitar abuso. Solo la admin lee — el cliente común nunca lee ni borra.
     match /telemetry/scans/events/{eventId} {
       allow create: if isValidScan(request.resource.data);
-      allow read, update, delete: if false;
+      allow read: if isAdmin();
+      allow update, delete: if false;
     }
     match /telemetry/contributions/events/{eventId} {
       allow create: if isValidContribution(request.resource.data);
-      allow read, update, delete: if false;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ───────────── Admin: scans en bulk ─────────────
+    // Solo la admin (ver isAdmin()) puede leer/escribir. Validamos el shape
+    // del doc resultante (request.resource.data ya viene "post-merge"
+    // tanto en create como en update, así que el mismo validador alcanza).
+    match /admin/scans/items/{barcode} {
+      allow read, delete: if isAdmin();
+      allow create, update: if isAdmin() && isValidAdminScan(request.resource.data);
     }
 
     // Bloqueamos todo lo demás por defecto
@@ -43,6 +54,15 @@ service cloud.firestore {
       allow read, write: if false;
     }
   }
+}
+
+// ───────────── Helpers ─────────────
+// Gating admin por UID en lugar de email: el UID es opaco y no es PII,
+// así que se puede commitear a un repo público sin filtrar info personal.
+// El UID es de la cuenta de Marina en Firebase Auth (Authentication > Users).
+function isAdmin() {
+  return request.auth != null
+      && request.auth.uid == "URXSAbooQiWPL2v8ck1uN1RFans1";
 }
 
 // ───────────── Validadores de esquema ─────────────
@@ -68,4 +88,18 @@ function isValidContribution(d) {
       && d.name is string && d.name.size() <= 200
       && d.dayBucket is string && d.dayBucket.size() <= 16
       && d.appVersion is string && d.appVersion.size() <= 16;
+}
+
+function isValidAdminScan(d) {
+  return d.keys().hasOnly([
+        'barcode', 'firstSeenAt', 'lastSeenAt', 'count',
+        'status', 'note', 'addedBy'
+      ])
+      && d.barcode is string && d.barcode.size() <= 64
+      && d.firstSeenAt is number
+      && d.lastSeenAt is number
+      && d.count is number
+      && d.status in ['pendiente', 'contribuido', 'descartado']
+      && d.note is string && d.note.size() <= 500
+      && d.addedBy is string && d.addedBy.size() <= 200;
 }

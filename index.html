@@ -23,6 +23,7 @@
     <nav>
       <button data-view="scan" class="nav-btn is-active">Escanear</button>
       <button data-view="shelf" class="nav-btn">Mi estantería</button>
+      <button data-view="admin" class="nav-btn" id="nav-admin" hidden>Admin</button>
     </nav>
   </header>
 
@@ -237,6 +238,16 @@
         <h2>Mi estantería</h2>
         <p class="muted" id="shelf-empty" hidden>Todavía no guardaste productos. Escaneá uno y tocá "Guardar en mi estantería".</p>
         <ul id="shelf-list" class="shelf-list"></ul>
+      </div>
+    </section>
+
+    <!-- View: ADMIN — visible solo cuando la admin está logueada.
+         La verificación real de seguridad la hacen las reglas de Firestore. -->
+    <section id="view-admin" class="view">
+      <div class="card">
+        <h2>Admin</h2>
+        <p class="muted">Sección privada. Las reglas de Firestore validan el acceso por UID.</p>
+        <div id="admin-content"></div>
       </div>
     </section>
   </main>

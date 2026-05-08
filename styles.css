@@ -393,6 +393,279 @@ pre {
   color: var(--muted);
 }
 
+/* ---------------------------------------------------------------------------
+   ADMIN
+   --------------------------------------------------------------------------- */
+
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  margin: 0 -4px 16px;
+  padding: 0 4px;
+}
+.admin-tab {
+  background: transparent;
+  border: 0;
+  padding: 10px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-weight: 600;
+}
+.admin-tab.is-active {
+  color: var(--ink);
+  border-bottom-color: var(--mint);
+}
+
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+  align-items: center;
+}
+.admin-toolbar select {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+/* Scanner del admin */
+.admin-scanner-cam {
+  position: relative;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 12px 0;
+  aspect-ratio: 16 / 11;
+}
+.admin-scanner-cam video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.admin-scanner-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.admin-scanner-frame {
+  width: 70%;
+  aspect-ratio: 5 / 2;
+  border: 2px dashed rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+}
+.admin-scanner-status {
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 6px 0 12px;
+}
+.admin-scanner-controls {
+  display: flex;
+  gap: 8px;
+}
+.admin-scanner-controls .btn { flex: 1; }
+
+.admin-manual { margin-top: 16px; }
+.admin-note-label {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.admin-note-label input {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+/* Toast de "guardado" sobre la cámara */
+.admin-saved-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.6);
+  background: var(--apto-bg);
+  color: var(--apto-fg);
+  font-weight: 800;
+  font-size: 22px;
+  padding: 14px 24px;
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.admin-saved-toast--again {
+  background: var(--verif-bg);
+  color: var(--verif-fg);
+  font-size: 16px;
+}
+.admin-saved-toast--in {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  animation: admin-saved-pulse 1.4s ease forwards;
+}
+@keyframes admin-saved-pulse {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  20%  { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+  40%  { transform: translate(-50%, -50%) scale(1); }
+  85%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+}
+
+/* Tabla del admin */
+.admin-list-stats { margin: 6px 0 12px; font-size: 13px; }
+.admin-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.admin-table th, .admin-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.admin-table th {
+  background: var(--cream-2);
+  font-weight: 700;
+  color: var(--ink);
+  position: sticky;
+  top: 0;
+}
+.admin-table tr:last-child td { border-bottom: 0; }
+.admin-table code {
+  font-size: 12px;
+  background: var(--cream-2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.admin-status-select {
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+  background: white;
+}
+.admin-note-input {
+  width: 100%;
+  min-width: 140px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+}
+.admin-actions {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+}
+.admin-link {
+  color: var(--mint-dark);
+  font-size: 12px;
+  text-decoration: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+.admin-link:hover { text-decoration: underline; }
+.admin-link--danger { color: var(--noapto-fg); }
+
+/* Badges */
+.admin-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+.admin-badge--ok      { background: var(--apto-bg);    color: var(--apto-fg); }
+.admin-badge--warn    { background: var(--noapto-bg);  color: var(--noapto-fg); }
+.admin-badge--neutral { background: var(--cream-2);    color: var(--muted); }
+
+/* Stats */
+.admin-h3 {
+  margin: 22px 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.admin-stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+.admin-stat-card {
+  background: var(--cream-2);
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+}
+.admin-stat-num {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+/* Bar chart */
+.admin-bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.admin-bar-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 30%) 1fr 40px;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+.admin-bar-label {
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.admin-bar-track {
+  background: var(--cream-2);
+  border-radius: 999px;
+  height: 14px;
+  overflow: hidden;
+}
+.admin-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--mint);
+  border-radius: 999px;
+}
+.admin-bar-value {
+  text-align: right;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+
 /* Search results */
 .search-results {
   list-style: none;

@@ -21,6 +21,7 @@ function categoryLabel(key) {
     silicones: "Siliconas no solubles",
     alcohols: "Alcoholes secantes",
     minerals: "Aceites minerales",
+    others: "Otros prohibidos",
   })[key] || key;
 }
 
@@ -43,9 +44,12 @@ export function buildShareText(item, categorySummary, opts) {
 
   if (categorySummary) {
     lines.push("");
-    for (const key of ["sulfates", "silicones", "alcohols", "minerals"]) {
+    for (const key of ["sulfates", "silicones", "alcohols", "minerals", "others"]) {
       const s = categorySummary[key]?.state;
       if (!s) continue;
+      // "others" sólo se renderiza cuando hay match (state="present");
+      // su default "na" es invisible para no agregar ruido.
+      if (key === "others" && s !== "present") continue;
       lines.push(`${emojiForCategoryState(s)} ${categoryLabel(key)}`);
     }
   }
