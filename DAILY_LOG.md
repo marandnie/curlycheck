@@ -5,6 +5,157 @@ Las entradas más recientes van arriba.
 
 ---
 
+## 2026-05-08 — Parser: stripping de marcadores de anotación (asteriscos orgánicos, footnotes, %, corchetes)
+
+### Problema
+Las INCI naturales/orgánicas suelen llevar marcadores pegados al nombre
+del ingrediente para indicar origen orgánico, certificación, footnote
+o porcentaje en la formulación:
+
+- `Aqua*`, `Glycerin**`, `Cetearyl Alcohol*` (asterisco orgánico)
+- `Aqua†`, `Glycerin‡`, `Parfum°` (dagas / grado como footnote)
+- `Aqua¹`, `Glycerin²`, `Parfum³` (superíndices Unicode)
+- `[Aqua]`, `[Glycerin*]` (corchetes envolventes)
+- `• Aqua`, `– Glycerin`, `— Parfum` (viñetas/dashes de lista)
+- `Aqua 70%`, `Glycerin 0,1%` (porcentajes pegados)
+
+`splitInciTokens` sólo trimmeaba `[ ."\t]+` en bordes, así que estos
+markers quedaban pegados al token. Resultado: `Aqua*` no matcheaba la
+INDEX (`aqua*` ≠ `aqua`), iba a `unknown`, y `unknownRatio` podía cruzar
+el umbral del ruleset (15% en estándar) forzando VERIFICAR aún cuando
+el producto debería ser APTO. Caso peor: una INCI 100% orgánica
+(`Aqua*, Glycerin*, Parfum*`) producía 100% unknowns → VERIFICAR
+inutilizable.
+
+Confirmé experimentalmente con un probe:
+- `parseInci("Aqua*, Glycerin**, Cetearyl Alcohol*, Parfum")` →
+  `['Aqua*', 'Glycerin**', 'Cetearyl Alcohol*', 'Parfum']` (3 unknowns).
+- `Cetearyl Alcohol*` accidentalmente matcheaba vía el fallback
+  multi-palabra de `substringMatch` (la key `"cetearyl alcohol"` está
+  contenida en `"cetearyl alcohol*"`), pero los single-word
+  (`Aqua*`, `Glycerin**`, `Parfum*`) no tenían ningún safety net.
+- `classify("Aqua*, Sodium Cocoyl Isethionate*, Glycerin*, Parfum*")`
+  → VERIFICAR con 100% unknown.
+
+El flujo OCR mitigaba *parcialmente* via `correctInciText` (Levenshtein),
+pero (a) sólo en pasta directa del usuario no se aplica, (b) tokens cortos
+con maxDistance=0 (≤4 chars) seguían fallando, (c) gastar Levenshtein
+para algo que es claramente un marker presentacional es desperdicio.
+
+### Comportamiento esperado
+`parseInci` normaliza markers que no son parte del nombre INCI,
+permitiendo que el lookup exacto matchee igual que con la INCI "limpia".
+Compatible con el comportamiento previo: ingredientes sin markers
+producen exactamente los mismos tokens que antes.
+
+Casos a respetar (regresiones inversas):
+- Locantes numéricos con coma (`2-Oleamido-1,3-Octadecanediol`) intactos.
+- Guiones internos en nombres químicos (`PEG-7`, `C12-15 Alkyl Benzoate`)
+  intactos — no confundirlos con bullets de lista.
+- Ofensores reales con marker (`Sodium Lauryl Sulfate*`) siguen siendo
+  ofensores — el strip no oculta nada.
+
+### Implementación
+1. **`src/classifier.js`** — extraje un helper interno
+   `stripAnnotationMarkers(t)` que se aplica a cada token después del
+   split por coma. Aplica:
+   - Trim básico (`[ ."\t]+` en bordes) — comportamiento previo.
+   - Bracket wrapper `^\[(...)\]$` → contenido (corchetes envolventes
+     completos, no parciales).
+   - Bullet/dash inicial `^[•▪\-–—]\s+` (sólo si seguido por whitespace,
+     para no comerse el guión de `1-Octadecanediol`).
+   - Loop iterativo de stripping de marcadores y porcentajes finales
+     hasta estabilizar (idempotente). Maneja casos combinados como
+     `Aqua* 70%` o `Glycerin **`.
+   - Patrones constantes a nivel de módulo:
+     - `TRAILING_FOOTNOTE_PATTERN = /\s*[*°^†‡²³¹⁰-⁹]+\s*$/`
+     - `TRAILING_PERCENT_PATTERN = /\s+\d+(?:[.,]\d+)?\s*%\s*$/`
+     - `LEADING_BULLET_PATTERN = /^[•▪\-–—]\s+/`
+     - `WRAPPING_BRACKETS_PATTERN = /^\[([^\[\]]+)\]$/`
+2. `splitInciTokens` ahora invoca `stripAnnotationMarkers(restored)` en
+   vez del trim inline, manteniendo idéntica la fase de
+   normalización de separadores y protección de comas en locantes.
+
+`correctInciText` (en `src/fuzzy.js`) usa `splitInciTokens` y por lo
+tanto hereda el stripping automáticamente — sin cambios necesarios en
+fuzzy.js. Esto también elimina el desperdicio de Levenshtein sobre
+tokens con markers presentacionales.
+
+### Componentes afectados
+Frontend: motor de clasificación / parser INCI. UI, OCR, telemetría y
+backend intactos. La firma externa de `splitInciTokens` y `parseInci`
+no cambia (mismas in/out shapes).
+
+### Archivos modificados
+- `src/classifier.js`
+  - 4 patrones de regex constantes nuevos a nivel de módulo.
+  - Helper interno `stripAnnotationMarkers(t)` (idempotente, loop
+    estabilizador para combos).
+  - `splitInciTokens` ahora usa el helper en vez del trim inline.
+  - Comentarios in-source documentan el porqué (referencia a este fix).
+- `tests/test_classifier.mjs` — 15 tests nuevos:
+  - Asteriscos simples y dobles (`Aqua*`, `Glycerin**`).
+  - Dagas † ‡, grado °, caret ^.
+  - Superíndices Unicode (¹ ² ³).
+  - Corchetes envolventes (`[Aqua]`, `[Glycerin*]`).
+  - Viñetas/dashes iniciales (`•`, `–`, `—`).
+  - Porcentajes finales (`70%`, `0.1%`, `0,1%`).
+  - Combinado (`Aqua* 70%`).
+  - Regresión inversa: locantes numéricos no se rompen.
+  - Regresión inversa: PEG-7 / C12-15 (guiones internos) intactos.
+  - Regresión integral: INCI 100% orgánica con `*` → APTO 0 unknowns.
+  - Regresión seguridad: sulfato con asterisco sigue siendo NO APTO.
+  - Idempotencia: `parseInci(parseInci(x))` estable.
+
+### Tests
+- `tests/test_classifier.mjs`: **49/49** pasaron (era 34, +15).
+- `tests/test_fuzzy.mjs`: **14/14** pasaron (sin cambios, hereda strip
+  vía `splitInciTokens`).
+- `tests/test_categories.mjs`: **10/10** pasaron (sin cambios).
+- Total: **73/73** pasan. Golden set de 18 productos intacto.
+
+### Riesgo / regresiones consideradas
+- Los 18 golden products no contienen markers, así que su comportamiento
+  no cambia. Confirmado por el suite verde.
+- El `LEADING_BULLET_PATTERN` exige whitespace después del bullet, así
+  que `1-Octadecanediol`, `2-Oleamido…`, `C12-15 Alkyl Benzoate` y
+  `PEG-7 Phosphate` no se ven afectados (sus guiones no llevan espacio
+  posterior). Test explícito incluido.
+- El loop de stripping itera hasta estabilizar — bound natural por
+  reducción de longitud, sin riesgo de bucle infinito.
+- `correctInciText` ya usa `splitInciTokens`, así que el flujo OCR
+  también gana el strip sin cambios extra. Tests de fuzzy confirman
+  que no rompe.
+- Service worker / cache: ningún hash inmutable; no requiere bump del
+  cache version.
+- Telemetría: shape de `classify()` igual; los tokens en `unknown`
+  ahora son los nombres reales (sin markers) — UX más limpia, sin
+  cambios de schema.
+
+### Follow-ups / deuda técnica observada
+- Quedó un `_probe.mjs` vacío en la raíz de `curlycheck/` (artefacto
+  de exploración; truncado por el sync issue entre Edit tool y bash
+  sandbox documentado en entradas previas). No es referenciado por
+  ningún runner; conviene removerlo en una run futura cuando el
+  sandbox lo permita. Sigue la misma situación de los `_probe*` de
+  2026-05-05/06.
+- Caso no cubierto: markers en posición intermedia (ej. `Aqua* and
+  Glycerin` dentro de un mismo token compuesto). En la práctica las
+  INCI usan `*` sólo al final del nombre individual, así que la
+  prioridad es baja.
+- Caso no cubierto: símbolos de marcas registradas (`®`, `™`) pegados
+  al nombre. Suelen aparecer en nombres comerciales más que INCI,
+  pero si surge se puede sumar al `TRAILING_FOOTNOTE_PATTERN` —
+  cambio trivial.
+- Posible mejora futura: detectar y filtrar lineas tipo `+/-`,
+  `May Contain:` (color additives variables) que algunas marcas
+  añaden al final de la INCI. Hoy esos tokens caen como `unknown`;
+  si el ratio sube mucho podrían forzar VERIFICAR espurio. Pendiente
+  de evidencia con datos reales.
+
+---
+
+
 ## 2026-05-07 — UX: chip "Otros prohibidos" para extraForbidden ajenos a CATEGORY_GROUPS
 
 ### Problema

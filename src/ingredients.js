@@ -260,17 +260,36 @@ export const INGREDIENTS = [
   { name: "Cinnamal", category: C.FRAGRANCE, aliases: ["Cinnamaldehyde"], severity: "allowed" },
   { name: "Hexamethylindanopyran", category: C.FRAGRANCE, aliases: ["Galaxolide"], severity: "allowed" },
   { name: "Terpineol", category: C.FRAGRANCE, severity: "allowed" },
-  { name: "Tetramethyl Acetyloctahydronaphtalenes", category: C.FRAGRANCE, aliases: ["Iso E Super"], severity: "allowed" },
+  { name: "Tetramethyl Acetyloctahydronaphthalenes", category: C.FRAGRANCE, aliases: ["Iso E Super", "Tetramethyl Acetyloctahydronaphtalenes"], severity: "allowed" },
+  { name: "Carvone", category: C.FRAGRANCE, severity: "allowed" },
+  { name: "Pinene", category: C.FRAGRANCE, aliases: ["Alpha-Pinene", "Beta-Pinene", "α-Pinene", "β-Pinene"], severity: "allowed" },
+  { name: "Citrus Limon Peel Oil", category: C.FRAGRANCE, aliases: ["Lemon Peel Oil", "Citrus Medica Limonum Peel Oil"], severity: "allowed" },
+  { name: "Citrus Aurantium Peel Oil", category: C.FRAGRANCE, aliases: ["Citrus Aurantium Dulcis Peel Oil", "Citrus Aurantium Amara Peel Oil", "Bitter Orange Peel Oil", "Sweet Orange Peel Oil"], severity: "allowed" },
   { name: "Linalyl Acetate", category: C.FRAGRANCE, severity: "allowed" },
   { name: "Vanillin", category: C.FRAGRANCE, severity: "allowed" },
 
   // --- Colorantes adicionales ---
   { name: "CI 19140", category: C.OTHER, aliases: ["Cl 19140", "FD&C Yellow 5", "Tartrazine"], severity: "allowed" },
+  { name: "CI 14700", category: C.OTHER, aliases: ["Cl 14700", "FD&C Red 4", "Ponceau SX"], severity: "allowed" },
 
   // --- Aliases para el INCI canónico Caprylic/Capric Triglyceride
   // (cuando aparece como dos tokens partidos en la etiqueta) ---
   { name: "Caprylic Triglyceride", category: C.NATURAL_OIL, severity: "allowed" },
   { name: "Capric Triglyceride", category: C.NATURAL_OIL, severity: "allowed" },
+
+  // --- Emulsionantes / espesantes / emolientes adicionales ---
+  { name: "Laureth-4", category: C.OTHER, severity: "allowed" },
+  { name: "Hydroxyethylcellulose", category: C.OTHER, severity: "allowed" },
+  { name: "Polysorbate 60", category: C.OTHER, severity: "allowed" },
+  { name: "Isononyl Isononanoate", category: C.OTHER, severity: "allowed" },
+
+  // --- Proteínas adicionales ---
+  { name: "Hydrolyzed Corn Protein", category: C.PROTEIN, severity: "allowed" },
+  { name: "Hydrolyzed Soy Protein", category: C.PROTEIN, severity: "allowed" },
+
+  // --- Silicona soluble adicional ---
+  // Polysilicone-29: tratada como soluble (rinse-out) según rotulación del fabricante.
+  { name: "Polysilicone-29", category: C.SILICONE_SOLUBLE, severity: "allowed" },
 
 ];
 

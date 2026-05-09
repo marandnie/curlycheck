@@ -36,16 +36,65 @@ const LOT_CODE_PATTERN = /^(FIL|LOT|BATCH|REF|N°|N\.|NRO|LOTE)\s*[\w\-\.]+$/i;
 // (ej. "2-Oleamido-1,3-Octadecanediol")
 const COMMA_PLACEHOLDER = "<<COMMA>>";
 
+// Marcadores comunes que aparecen pegados al nombre del ingrediente en
+// listas INCI naturales/orgánicas o copiadas de envases:
+//   *  **  ***  → asterisco de origen orgánico / certificación
+//   †  ‡       → dagas de footnote (segundo y tercer marcador)
+//   °  ^       → grado y caret usados como footnote
+//   ¹²³ etc.   → superíndices Unicode
+// Stripping conservador: sólo al final del token, posiblemente con espacios.
+// No tocamos posiciones intermedias para no romper nombres químicos exóticos.
+const TRAILING_FOOTNOTE_PATTERN = /\s*[*°^†‡²³¹⁰-⁹]+\s*$/;
+
+// "Aqua 70%", "Glycerin 0.1%": el porcentaje en la propia INCI rompe el lookup.
+const TRAILING_PERCENT_PATTERN = /\s+\d+(?:[.,]\d+)?\s*%\s*$/;
+
+// Bullets / guiones de lista al principio del token (sólo si están seguidos
+// por whitespace para no comerse el guión de un locante "1-Octadecanediol").
+const LEADING_BULLET_PATTERN = /^[•▪\-–—]\s+/;
+
+// Corchetes que envuelven todo el token: "[Aqua]" → "Aqua".
+// Sólo si el corchete cierra al final, para no romper "[Aqua) Glycerin]" raros.
+const WRAPPING_BRACKETS_PATTERN = /^\[([^\[\]]+)\]$/;
+
+/**
+ * Limpia marcadores que no son parte del nombre del ingrediente:
+ * asteriscos/footnote orgánicos, porcentajes finales, corchetes envolventes
+ * y viñetas iniciales. Se aplica sobre el token YA separado por coma.
+ * Idempotente: aplicar dos veces da el mismo resultado.
+ */
+function stripAnnotationMarkers(t) {
+  let s = t;
+  // Trim básico (igual al comportamiento previo)
+  s = s.replace(/[ ."\t]+$/, "").replace(/^[ "\t]+/, "");
+  // Bracket wrapper antes de cualquier otra cosa: "[Aqua*]" → "Aqua*"
+  const bracketMatch = s.match(WRAPPING_BRACKETS_PATTERN);
+  if (bracketMatch) s = bracketMatch[1].trim();
+  // Bullet de lista al inicio
+  s = s.replace(LEADING_BULLET_PATTERN, "");
+  // Stripping iterativo de marcadores y porcentajes finales hasta estabilizar.
+  // Caso típico que requiere más de una pasada: "Aqua* 70%" o "Glycerin **".
+  let prev;
+  do {
+    prev = s;
+    s = s.replace(TRAILING_PERCENT_PATTERN, "");
+    s = s.replace(TRAILING_FOOTNOTE_PATTERN, "");
+  } while (s !== prev);
+  return s.trim();
+}
+
 /**
  * Splittea un texto INCI en tokens preservando las comas internas de los
  * locantes numéricos (1,2-Hexanediol, 2-Oleamido-1,3-Octadecanediol, etc.).
  * También normaliza separadores (`;`, `·`, saltos de línea → `,`) y descarta
- * un prefijo tipo "Ingredients:" si aparece. NO filtra códigos de lote ni
- * resuelve slashes — es el "split crudo" que `parseInci` y `correctInciText`
- * comparten para no divergir en el manejo de comas.
+ * un prefijo tipo "Ingredients:" si aparece. Limpia marcadores de anotación
+ * comunes (asteriscos orgánicos, footnotes, porcentajes, corchetes
+ * envolventes, viñetas) que no son parte del nombre del ingrediente.
+ * NO filtra códigos de lote ni resuelve slashes — es el "split crudo" que
+ * `parseInci` y `correctInciText` comparten.
  *
  * @param {string} text
- * @returns {string[]} tokens trimmeados (puede contener strings vacías filtradas)
+ * @returns {string[]} tokens trimmeados, sin marcadores espurios
  */
 export function splitInciTokens(text) {
   if (!text) return [];
@@ -53,9 +102,8 @@ export function splitInciTokens(text) {
   text = text.replace(/\n/g, ",").replace(/;/g, ",").replace(/·/g, ",");
   text = text.replace(/(\d),(\d)/g, "$1" + COMMA_PLACEHOLDER + "$2");
   const tokens = text.split(",").map(function(t) {
-    return t.split(COMMA_PLACEHOLDER).join(",")
-            .replace(/[ ."\t]+$/, "")
-            .replace(/^[ "\t]+/, "");
+    const restored = t.split(COMMA_PLACEHOLDER).join(",");
+    return stripAnnotationMarkers(restored);
   });
   return tokens.filter(function(t) { return t.length > 0; });
 }

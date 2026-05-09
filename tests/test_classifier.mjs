@@ -222,6 +222,124 @@ test("classify regresión: INCI con 'Cetearyl Alcohol Stearate' no se marca NO A
   assertEq(r.verdict, "APTO", "no debe ser NO APTO por substring espurio");
 });
 
+
+// ---------------------------------------------------------------------------
+// Tests para stripping de marcadores de anotación (bug 2026-05-08)
+// ---------------------------------------------------------------------------
+// Las INCI naturales/orgánicas suelen llevar asteriscos, dagas, superíndices,
+// porcentajes o corchetes pegados al nombre del ingrediente. Si no se
+// limpian, el lookup falla y `unknownRatio` puede cruzar el umbral (15% en
+// estándar) forzando VERIFICAR aún cuando el producto debería ser APTO.
+
+test("anotación: 'Aqua*' → 'Aqua' (asterisco orgánico)", () => {
+  const tokens = parseInci("Aqua*, Glycerin*, Parfum*");
+  assertEq(tokens.length, 3);
+  assertEq(tokens[0], "Aqua");
+  assertEq(tokens[1], "Glycerin");
+  assertEq(tokens[2], "Parfum");
+});
+
+test("anotación: dobles asteriscos 'Glycerin**'", () => {
+  const tokens = parseInci("Aqua, Glycerin**, Parfum");
+  assertEq(tokens[1], "Glycerin");
+});
+
+test("anotación: dagas † y ‡ se strippean", () => {
+  const tokens = parseInci("Aqua†, Glycerin‡, Parfum");
+  assertEq(tokens[0], "Aqua");
+  assertEq(tokens[1], "Glycerin");
+});
+
+test("anotación: superíndices ¹ ² ³ se strippean", () => {
+  const tokens = parseInci("Aqua¹, Glycerin², Parfum³");
+  assertEq(tokens[0], "Aqua");
+  assertEq(tokens[1], "Glycerin");
+  assertEq(tokens[2], "Parfum");
+});
+
+test("anotación: grado ° y caret ^ se strippean", () => {
+  const tokens = parseInci("Aqua°, Glycerin^, Parfum");
+  assertEq(tokens[0], "Aqua");
+  assertEq(tokens[1], "Glycerin");
+});
+
+test("anotación: corchetes envolventes [Aqua] → Aqua", () => {
+  const tokens = parseInci("[Aqua], [Glycerin*], Parfum");
+  assertEq(tokens[0], "Aqua");
+  assertEq(tokens[1], "Glycerin");
+});
+
+test("anotación: viñetas/dashes iniciales se strippean", () => {
+  const tokens = parseInci("• Aqua, – Glycerin, — Parfum");
+  assertEq(tokens[0], "Aqua");
+  assertEq(tokens[1], "Glycerin");
+  assertEq(tokens[2], "Parfum");
+});
+
+test("anotación: porcentajes finales 'Aqua 70%'", () => {
+  const tokens = parseInci("Aqua 70%, Glycerin 5%, Parfum 0.1%");
+  assertEq(tokens[0], "Aqua");
+  assertEq(tokens[1], "Glycerin");
+  assertEq(tokens[2], "Parfum");
+});
+
+test("anotación: porcentaje con coma decimal 'Aqua 0,1%'", () => {
+  const tokens = parseInci("Aqua 0,1%, Glycerin");
+  assertEq(tokens[0], "Aqua");
+  assertEq(tokens[1], "Glycerin");
+});
+
+test("anotación combinada: 'Aqua* 70%' → 'Aqua'", () => {
+  const tokens = parseInci("Aqua* 70%, Glycerin");
+  assertEq(tokens[0], "Aqua");
+});
+
+test("anotación NO rompe locantes numéricos", () => {
+  // El stripping no debe tocar las comas internas protegidas
+  const tokens = parseInci("Aqua, 2-Oleamido-1,3-Octadecanediol, 1,2-Hexanediol");
+  assertEq(tokens.length, 3);
+  assertEq(tokens[1], "2-Oleamido-1,3-Octadecanediol");
+  assertEq(tokens[2], "1,2-Hexanediol");
+});
+
+test("anotación NO rompe nombres químicos con guiones (PEG-7, C12-15)", () => {
+  // Los guiones internos / al final del prefijo no deben confundirse con
+  // bullets de lista. PEG-7 debe seguir siendo PEG-7.
+  const tokens = parseInci("PEG-7, Dimethicone PEG-7 Phosphate, C12-15 Alkyl Benzoate");
+  assertEq(tokens[0], "PEG-7");
+  assertEq(tokens[1], "Dimethicone PEG-7 Phosphate");
+  assertEq(tokens[2], "C12-15 Alkyl Benzoate");
+});
+
+// Regresión integral: una INCI 100% orgánica (todos los ingredientes con `*`)
+// antes producía 4/4 unknowns → VERIFICAR. Ahora debe matchear todos los
+// ingredientes y dar veredicto correcto según el ruleset.
+test("regresión: INCI orgánica 100% asteriscos → APTO con 0 unknowns", () => {
+  const inci = "Aqua*, Sodium Cocoyl Isethionate*, Glycerin*, Cetearyl Alcohol*, Parfum*";
+  const r = classify(inci, "standard");
+  assertEq(r.verdict, "APTO", "INCI orgánica con asteriscos debe ser APTO");
+  if (r.unknown.length > 0) {
+    throw new Error("aún hay unknowns post-strip: " + JSON.stringify(r.unknown));
+  }
+});
+
+test("regresión: INCI orgánica con sulfato sigue NO APTO", () => {
+  // El stripping no debe ocultar ofensores reales: si un ingrediente
+  // prohibido lleva asterisco, sigue siendo prohibido.
+  const inci = "Aqua*, Sodium Lauryl Sulfate*, Glycerin*";
+  const r = classify(inci, "standard");
+  assertEq(r.verdict, "NO APTO", "sulfato con asterisco sigue siendo sulfato");
+});
+
+test("idempotencia: parseInci(parseInci(x)) ≡ parseInci(x)", () => {
+  // Si el stripping no es idempotente puede haber loops o residuos.
+  const original = "Aqua* 70%, Glycerin **, [Parfum]";
+  const once = parseInci(original);
+  const twice = parseInci(once.join(", "));
+  if (JSON.stringify(once) !== JSON.stringify(twice)) {
+    throw new Error("no idempotente: once=" + JSON.stringify(once) + " twice=" + JSON.stringify(twice));
+  }
+});
 console.log("\nTotal: " + passed + " pasaron, " + failed + " fallaron.");
 if (failed > 0) {
   console.log("Fallas:");
