@@ -1,1 +1,9 @@
 .claude
+
+# Catálogo INCI completo (7.4 MB): artefacto intermedio de
+# scripts/build-inci-catalog.py. La app sólo carga inci-names.json.
+src/data/inci-catalog.json
+
+# Basura del sistema
+Thumbs.db
+.DS_Store

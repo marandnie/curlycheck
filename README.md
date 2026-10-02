@@ -209,3 +209,5 @@ bubblewrap build
 ## Atribución
 
 Datos de productos: [Open Beauty Facts](https://world.openbeautyfacts.org) (CC-BY-SA 4.0). La atribución está visible en el footer de la app.
+
+Catálogo de nombres INCI (`src/data/inci-names.json`): generado con `scripts/build-inci-catalog.py` a partir de [CosIng](https://ec.europa.eu/growth/tools-databases/cosing/) (Comisión Europea) y la taxonomía de ingredientes de [Open Beauty Facts](https://world.openbeautyfacts.org) (ODbL).
