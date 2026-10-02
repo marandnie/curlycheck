@@ -1,7 +1,12 @@
 // Service worker simple — cache-first del shell, network-first de OBF.
 // Cambiá CACHE_VERSION cuando deployes una nueva versión para forzar refresh.
 
-const CACHE_VERSION = "curlycheck-v16";
+const CACHE_VERSION = "curlycheck-v17";
+// Cache aparte para datos pesados (catálogo INCI): NO va en el SHELL porque
+// cache.addAll es atómico (un 404 ahí impide instalar el SW nuevo) y porque
+// se re-descargaría ~1 MB en cada bump de CACHE_VERSION. Se cachea en el
+// primer uso y se refresca con stale-while-revalidate.
+const DATA_CACHE = "curlycheck-data-v1";
 const SCOPE = "/curlycheck/";
 const SHELL = [
   SCOPE,
@@ -12,6 +17,7 @@ const SHELL = [
   SCOPE + "src/app.js",
   SCOPE + "src/classifier.js",
   SCOPE + "src/ingredients.js",
+  SCOPE + "src/inci-extended.js",
   SCOPE + "src/obf.js",
   SCOPE + "src/shelf.js",
   SCOPE + "src/local-products.js",
@@ -44,7 +50,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then(function(keys) {
       return Promise.all(
-        keys.filter(function(k) { return k !== CACHE_VERSION; })
+        keys.filter(function(k) { return k !== CACHE_VERSION && k !== DATA_CACHE; })
             .map(function(k) { return caches.delete(k); })
       );
     })
@@ -62,6 +68,25 @@ self.addEventListener("fetch", (event) => {
     url.hostname.endsWith("gstatic.com") ||
     url.pathname.startsWith("/__/auth/")
   ) {
+    return;
+  }
+
+  // Catálogo INCI: stale-while-revalidate (sirve lo cacheado al instante y
+  // actualiza en segundo plano; offline usa la última copia).
+  if (url.origin === self.location.origin && url.pathname.startsWith(SCOPE + "src/data/")) {
+    const dataCache = caches.open(DATA_CACHE);
+    const update = dataCache.then(function(cache) {
+      return fetch(event.request).then(function(res) {
+        if (res.ok) cache.put(event.request, res.clone());
+        return res;
+      });
+    });
+    event.waitUntil(update.catch(function() {}));
+    event.respondWith(
+      dataCache
+        .then(function(cache) { return cache.match(event.request); })
+        .then(function(cached) { return cached || update; })
+    );
     return;
   }
 

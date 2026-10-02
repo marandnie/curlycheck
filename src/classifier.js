@@ -1,6 +1,7 @@
 // Motor de clasificación: parser INCI + lookup + veredicto.
 
 import { CATEGORIES, INGREDIENTS, RULESETS } from "./ingredients.js";
+import { isKnownInci } from "./inci-extended.js";
 
 export const VERDICT = {
   APTO: "APTO",
@@ -156,6 +157,55 @@ function substringMatch(norm) {
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Fallback por familia química
+// Último recurso cuando el token no matchea nada curado. Generaliza los
+// criterios que ya están en ingredients.js para que un INCI válido de la misma
+// familia no quede como "desconocido" (ej. "Magnesium Laureth Sulfate",
+// "Sodium Coceth Sulfate", "Phenyl Methicone", "Cyclotetrasiloxane").
+//   - Sulfatos: alquil sulfatos y alquil éter sulfatos (…eth[-n] sulfate,
+//     lauryl/myristyl/coco/alkyl sulfate). NO toma sulfosuccinatos,
+//     sulfoacetatos, olefin sulfonatos ni methosulfatos (quats).
+//     Cetyl/cetearyl/stearyl sulfate quedan afuera a propósito (emulsionantes;
+//     si se quieren prohibir, agregarlos al curado).
+//   - Siliconas: …methicon…, …siloxane, silsesquioxane, siloxysilicate.
+//     Solubles sólo si llevan PEG/PPG o copolyol (igual que el curado).
+//     Polysilicone-N y silanos/silanoles quedan afuera (criterio curado).
+// Mantener en sync con el clasificador Python.
+// ---------------------------------------------------------------------------
+const FAMILY_SULFATE = /\b(?:[a-z]+eth(?:-\d+)?|lauryl|myristyl|coco|(?:c\d+-\d+\s+)?alkyl)\s*-?\s*sul(?:f|ph)ate\b/;
+const FAMILY_SILICONE = /(?:methicon|siloxane|silsesquioxane|siloxysilicate|trimethylsiloxy)/;
+const FAMILY_SILICONE_SOLUBLE = /\b(?:peg|ppg)\b|copolyol/;
+
+function familyMatch(norm, raw) {
+  let category = null;
+  let explanation = "";
+  if (FAMILY_SULFATE.test(norm)) {
+    category = CATEGORIES.SULFATE;
+    explanation = "Sulfato (alquil o alquil éter sulfato), detectado por familia química.";
+  } else if (FAMILY_SILICONE.test(norm)) {
+    if (FAMILY_SILICONE_SOLUBLE.test(norm)) {
+      category = CATEGORIES.SILICONE_SOLUBLE;
+      explanation = "Silicona soluble en agua (PEG/PPG), detectada por familia química.";
+    } else {
+      category = CATEGORIES.SILICONE_INSOLUBLE;
+      explanation = "Silicona no soluble en agua, detectada por familia química.";
+    }
+  }
+  if (!category) return null;
+  return { name: raw.trim(), category, explanation, family: true };
+}
+
+// El substring toma "dimethicone" como última palabra y marca como insolubles
+// a las siliconas PEG/PPG ("PEG-10 Dimethicone" → Dimethicone), contradiciendo
+// el criterio curado. Sólo se corrige ese caso; el resto del substring queda igual.
+function fixPegSilicone(found, norm, token) {
+  if (found.category === CATEGORIES.SILICONE_INSOLUBLE && FAMILY_SILICONE_SOLUBLE.test(norm)) {
+    return familyMatch(norm, token) || found;
+  }
+  return found;
+}
+
 export function lookupIngredient(token) {
   const norm = normalizeToken(token);
   if (!norm) return null;
@@ -165,12 +215,12 @@ export function lookupIngredient(token) {
     return INDEX.get(withoutParens);
   }
   const found = substringMatch(norm);
-  if (found) return found;
+  if (found) return fixPegSilicone(found, norm, token);
   if (withoutParens && withoutParens !== norm) {
     const found2 = substringMatch(withoutParens);
-    if (found2) return found2;
+    if (found2) return fixPegSilicone(found2, norm, token);
   }
-  return null;
+  return familyMatch(norm, token);
 }
 
 export function classify(inciText, rulesetName) {
@@ -189,13 +239,28 @@ export function classify(inciText, rulesetName) {
   let matched = 0;
   for (const raw of tokens) {
     const ing = lookupIngredient(raw);
-    if (!ing) { unknown.push(raw); continue; }
-    matched++;
-    let isForbidden = rs.forbiddenCategories.has(ing.category) || rs.extraForbidden.has(ing.name);
-    if (rs.extraAllowed.has(ing.name)) isForbidden = false;
-    if (isForbidden) {
-      offenders.push({ raw, matched: ing, reason: ing.explanation || ing.category });
+    if (ing) {
+      matched++;
+      let isForbidden = rs.forbiddenCategories.has(ing.category) || rs.extraForbidden.has(ing.name);
+      if (rs.extraAllowed.has(ing.name)) isForbidden = false;
+      if (isForbidden) {
+        offenders.push({ raw, matched: ing, reason: ing.explanation || ing.category });
+      }
+      continue;
     }
+    // Fallback al catálogo extendido CosIng/OBF: si el ingrediente existe en
+    // el catálogo oficial pero no en la lista curada, lo contamos como matched
+    // (no es ruido del OCR) pero sin emitir juicio curly. Esto mejora la
+    // cobertura y reduce VERIFICAR falsos en productos con ingredientes
+    // exóticos pero no problemáticos (ej. "Polyquaternium-37").
+    // IMPORTANTE: va DESPUÉS de lookupIngredient, que incluye el fallback por
+    // familia química. Sin él, un sulfato o silicona no curado ("Sodium Coceth
+    // Sulfate", "Phenyl Methicone") contaría como neutro y daría APTO falso.
+    if (isKnownInci(raw)) {
+      matched++;
+      continue;
+    }
+    unknown.push(raw);
   }
   const coverage = tokens.length ? matched / tokens.length : 0;
   const unknownRatio = tokens.length ? unknown.length / tokens.length : 0;

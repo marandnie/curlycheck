@@ -79,7 +79,7 @@ export const INGREDIENTS = [
   { name: "Paraffinum Liquidum", category: C.MINERAL_OIL, aliases: ["Liquid Paraffin"], severity: "high" },
   { name: "Petrolatum", category: C.MINERAL_OIL, aliases: ["Petroleum Jelly", "Vaselina"], severity: "high" },
   { name: "Paraffin", category: C.MINERAL_OIL, aliases: ["Paraffin Wax"], severity: "high" },
-  { name: "Microcrystalline Wax", category: C.WAX, aliases: ["Cera Microcristalina"], severity: "high" },
+  { name: "Microcrystalline Wax", category: C.WAX, aliases: ["Cera Microcristalina", "Cera Microcristallina"], severity: "high" },
   { name: "Ozokerite", category: C.WAX, severity: "high" },
   { name: "Ceresin", category: C.WAX, severity: "high" },
 

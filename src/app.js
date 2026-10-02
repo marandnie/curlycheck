@@ -2,6 +2,7 @@
 // detector de barcode, integración OBF, render de resultado, estantería.
 
 import { classify, categorySummary, VERDICT } from "./classifier.js";
+import { warmExtendedCatalog } from "./inci-extended.js";
 import { shareResult } from "./share.js";
 import * as telemetry from "./telemetry.js";
 import { fetchByBarcode, contributeUrl } from "./obf.js";
@@ -820,6 +821,10 @@ async function runOcrOnCanvas(srcCanvas) {
   ocrProgressFill.style.width = "0%";
   ocrProgressText.textContent = "Preparando OCR (la primera vez baja ~3 MB)…";
   try {
+    // El catálogo se precarga en idle al abrir la app; si alguien llega al OCR
+    // antes, lo esperamos acá (en paralelo con Tesseract, no suma latencia).
+    // warmExtendedCatalog nunca rechaza: si falla, el fuzzy usa sólo el curado.
+    const catalogReady = warmExtendedCatalog();
     const { text } = await recognize(srcCanvas, (m) => {
       if (typeof m.progress === "number") {
         ocrProgressFill.style.width = Math.round(m.progress * 100) + "%";
@@ -828,6 +833,7 @@ async function runOcrOnCanvas(srcCanvas) {
     });
     ocrProgress.hidden = true;
     const cleaned = cleanInciText(text);
+    await catalogReady;
     const { text: corrected, changes } = correctInciText(cleaned);
     ocrText.value = corrected;
     ocrTextLabel.hidden = false;
@@ -1020,4 +1026,19 @@ if ("serviceWorker" in navigator) {
       console.warn("SW register failed", e);
     });
   });
+}
+
+// ---------------------------------------------------------------------------
+// Pre-warm del catálogo INCI extendido (CosIng + OBF, ~930 KB).
+// No bloquea el primer paint: lo hacemos en idle. El service worker
+// lo guarda en su cache de datos, así que la segunda visita es instantánea
+// y funciona offline.
+// ---------------------------------------------------------------------------
+function primeInciCatalog() {
+  warmExtendedCatalog().catch(() => { /* failsafe ya logueado */ });
+}
+if (typeof requestIdleCallback === "function") {
+  requestIdleCallback(primeInciCatalog, { timeout: 5000 });
+} else {
+  window.addEventListener("load", () => setTimeout(primeInciCatalog, 2000));
 }
