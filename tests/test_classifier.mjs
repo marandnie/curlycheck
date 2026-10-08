@@ -340,6 +340,55 @@ test("idempotencia: parseInci(parseInci(x)) ≡ parseInci(x)", () => {
     throw new Error("no idempotente: once=" + JSON.stringify(once) + " twice=" + JSON.stringify(twice));
   }
 });
+// ---------------------------------------------------------------------------
+// Alcoholes "<algo> Alcohol" no secantes (FINDINGS P1-5)
+// ---------------------------------------------------------------------------
+
+for (const [tok, cat] of [
+  ["Oleyl Alcohol", "fatty_alcohol"],
+  ["Arachidyl Alcohol", "fatty_alcohol"],
+  ["Isostearyl Alcohol", "fatty_alcohol"],
+  ["Lanolin Alcohol", "fatty_alcohol"],
+  ["Wool Alcohols", "fatty_alcohol"],
+  ["Cetostearyl Alcohol", "fatty_alcohol"],
+  ["Caprylyl Alcohol", "fatty_alcohol"],
+  ["Amyl Cinnamyl Alcohol", "fragrance"],
+  ["Cinnamyl Alcohol", "fragrance"],
+  ["Phenethyl Alcohol", "preservative"],
+  ["Polyvinyl Alcohol", "other"],
+]) {
+  test(`alcohol no secante: '${tok}' → ${cat}`, () => {
+    const ing = lookupIngredient(tok);
+    if (!ing) throw new Error("sin match");
+    assertEq(ing.category, cat, tok);
+  });
+}
+
+test("alcohol secante sigue detectado: Alcohol, Alcohol Denat., SD Alcohol 40, Ethyl Alcohol, Isopropyl Alcohol", () => {
+  for (const tok of ["Alcohol", "Alcohol Denat.", "SD Alcohol 40", "Ethyl Alcohol", "Isopropyl Alcohol"]) {
+    const ing = lookupIngredient(tok);
+    if (!ing) throw new Error(tok + ": sin match");
+    assertEq(ing.category, "drying_alcohol", tok);
+  }
+});
+
+test("substring: '<desconocido> Alcohol' ya NO se asume secante", () => {
+  const ing = lookupIngredient("Foobaryl Alcohol");
+  if (ing && ing.category === "drying_alcohol") throw new Error("mapeó a drying_alcohol");
+});
+
+test("classify regresión: acondicionador con Oleyl/Lanolin Alcohol + fragancia → APTO", () => {
+  const inci = "Aqua, Cetearyl Alcohol, Oleyl Alcohol, Lanolin Alcohol, Behentrimonium Chloride, Glycerin, Amyl Cinnamyl Alcohol, Phenoxyethanol, Parfum";
+  const r = classify(inci, "standard");
+  assertEq(r.verdict, "APTO", JSON.stringify(r.offenders.map((o) => o.raw)));
+});
+
+test("classify regresión: Alcohol Denat. sigue dando NO APTO", () => {
+  const r = classify("Aqua, Alcohol Denat., Oleyl Alcohol, Parfum", "standard");
+  assertEq(r.verdict, "NO APTO");
+  assertEq(r.offenders.length, 1, "sólo Alcohol Denat. es ofensor");
+});
+
 console.log("\nTotal: " + passed + " pasaron, " + failed + " fallaron.");
 if (failed > 0) {
   console.log("Fallas:");

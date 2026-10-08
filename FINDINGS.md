@@ -64,7 +64,7 @@ y una página/URL pública de solicitud de borrado.
 
 ## 🟠 P1 — Importantes (afectan el veredicto, datos o el panel admin)
 
-### 5. Falsos positivos del clasificador por substring matching ⚠ verificado
+### 5. ~~Falsos positivos del clasificador por substring matching~~ ✅ RESUELTO (2026-10-08, ver DAILY_LOG)
 `src/classifier.js:106-120` (`substringMatch`): para keys de una palabra ≥6 chars matchea si es
 la primera o última palabra del token. Resultado (ejecutado contra el código real):
 

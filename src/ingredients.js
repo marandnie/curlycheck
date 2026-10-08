@@ -59,7 +59,7 @@ export const INGREDIENTS = [
 
   // --- Alcoholes secantes ---
   { name: "Alcohol Denat", category: C.DRYING_ALCOHOL, aliases: ["Alcohol Denat.", "SD Alcohol", "Denatured Alcohol"], severity: "high" },
-  { name: "Ethanol", category: C.DRYING_ALCOHOL, aliases: ["Etanol"], severity: "high" },
+  { name: "Ethanol", category: C.DRYING_ALCOHOL, aliases: ["Etanol", "Ethyl Alcohol"], severity: "high" },
   { name: "Isopropyl Alcohol", category: C.DRYING_ALCOHOL, aliases: ["Isopropanol"], severity: "medium" },
   { name: "Propanol", category: C.DRYING_ALCOHOL, severity: "high" },
   { name: "Propyl Alcohol", category: C.DRYING_ALCOHOL, severity: "high" },
@@ -67,12 +67,27 @@ export const INGREDIENTS = [
 
   // --- Alcoholes grasos (permitidos) ---
   { name: "Cetyl Alcohol", category: C.FATTY_ALCOHOL, severity: "allowed" },
-  { name: "Cetearyl Alcohol", category: C.FATTY_ALCOHOL, severity: "allowed" },
+  { name: "Cetearyl Alcohol", category: C.FATTY_ALCOHOL, aliases: ["Cetostearyl Alcohol"], severity: "allowed" },
   { name: "Stearyl Alcohol", category: C.FATTY_ALCOHOL, severity: "allowed" },
   { name: "Behenyl Alcohol", category: C.FATTY_ALCOHOL, severity: "allowed" },
   { name: "Lauryl Alcohol", category: C.FATTY_ALCOHOL, severity: "allowed" },
   { name: "Myristyl Alcohol", category: C.FATTY_ALCOHOL, severity: "allowed" },
   { name: "Benzyl Alcohol", category: C.PRESERVATIVE, severity: "allowed" },
+  // Alcoholes "<algo> Alcohol" que NO son secantes. Sin estas entradas, el
+  // substring fallback los mapeaba a "Alcohol" (DRYING) → NO APTO falso.
+  { name: "Oleyl Alcohol", category: C.FATTY_ALCOHOL, explanation: "Alcohol graso insaturado; emoliente, no reseca.", severity: "allowed" },
+  { name: "Arachidyl Alcohol", category: C.FATTY_ALCOHOL, explanation: "Alcohol graso (C20); emoliente y espesante.", severity: "allowed" },
+  { name: "Isostearyl Alcohol", category: C.FATTY_ALCOHOL, explanation: "Alcohol graso ramificado; emoliente.", severity: "allowed" },
+  { name: "Caprylyl Alcohol", category: C.FATTY_ALCOHOL, aliases: ["Octyl Alcohol"], explanation: "Alcohol graso de cadena corta (C8); emoliente/coemulsionante.", severity: "allowed" },
+  { name: "Decyl Alcohol", category: C.FATTY_ALCOHOL, explanation: "Alcohol graso (C10).", severity: "allowed" },
+  { name: "Brassica Alcohol", category: C.FATTY_ALCOHOL, explanation: "Alcoholes grasos derivados de colza; emolientes.", severity: "allowed" },
+  { name: "Lanolin Alcohol", category: C.FATTY_ALCOHOL, aliases: ["Lanolin Alcohols", "Wool Alcohol", "Wool Alcohols"], explanation: "Alcoholes de lanolina; emolientes, no secantes.", severity: "allowed" },
+  { name: "Phenethyl Alcohol", category: C.PRESERVATIVE, aliases: ["Phenylethyl Alcohol"], explanation: "Conservante/aromático usado en baja concentración; no es secante.", severity: "allowed" },
+  { name: "Dichlorobenzyl Alcohol", category: C.PRESERVATIVE, explanation: "Conservante; no es secante.", severity: "allowed" },
+  { name: "Cinnamyl Alcohol", category: C.FRAGRANCE, explanation: "Componente de fragancia (alérgeno declarable); no es secante.", severity: "allowed" },
+  { name: "Amyl Cinnamyl Alcohol", category: C.FRAGRANCE, explanation: "Componente de fragancia (alérgeno declarable); no es secante.", severity: "allowed" },
+  { name: "Anise Alcohol", category: C.FRAGRANCE, aliases: ["Anisyl Alcohol"], explanation: "Componente de fragancia (alérgeno declarable); no es secante.", severity: "allowed" },
+  { name: "Polyvinyl Alcohol", category: C.OTHER, explanation: "Polímero formador de film; no es un alcohol secante.", severity: "allowed" },
 
   // --- Aceites minerales / petróleo ---
   { name: "Mineral Oil", category: C.MINERAL_OIL, aliases: ["Aceite Mineral"], severity: "high" },

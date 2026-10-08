@@ -1,7 +1,7 @@
 // Service worker simple — cache-first del shell, network-first de OBF.
 // Cambiá CACHE_VERSION cuando deployes una nueva versión para forzar refresh.
 
-const CACHE_VERSION = "curlycheck-v17";
+const CACHE_VERSION = "curlycheck-v18";
 // Cache aparte para datos pesados (catálogo INCI): NO va en el SHELL porque
 // cache.addAll es atómico (un 404 ahí impide instalar el SW nuevo) y porque
 // se re-descargaría ~1 MB en cada bump de CACHE_VERSION. Se cachea en el

@@ -5,6 +5,60 @@ Las entradas más recientes van arriba.
 
 ---
 
+## 2026-10-08 — Fix: alcoholes "<algo> Alcohol" no secantes marcados como DRYING (NO APTO falso)
+
+### Problema
+FINDINGS P1-5 (verificado de nuevo hoy contra el código real): el substring
+fallback de `lookupIngredient` matchea keys de una palabra si son la primera
+o última palabra del token. Como `"Alcohol"` es una entrada DRYING_ALCOHOL,
+cualquier `"<X> Alcohol"` no curado terminaba como alcohol secante:
+Oleyl, Arachidyl, Isostearyl, Lanolin, Caprylyl, Decyl, Brassica (grasos),
+Cinnamyl / Amyl Cinnamyl / Anise (fragancia), Phenethyl / Dichlorobenzyl
+(conservantes), Polyvinyl (film former), Ethyl Alcohol. Resultado: NO APTO
+falso en acondicionadores y cremas comunes. (El caso PEG-Dimethicone de P1-5
+ya estaba resuelto por `fixPegSilicone`.)
+
+### Implementación
+- `src/ingredients.js` + `clasificador/curly_classifier/ruleset.py` (sync):
+  13 entradas curadas nuevas con explicación (grasos → FATTY_ALCOHOL,
+  fragancias → FRAGRANCE, conservantes → PRESERVATIVE, PVA → OTHER), aliases
+  `Lanolin Alcohols`/`Wool Alcohol(s)`, `Phenylethyl Alcohol`, `Anisyl Alcohol`,
+  `Octyl Alcohol`; `Cetostearyl Alcohol` → alias de Cetearyl; `Ethyl Alcohol`
+  → alias de Ethanol (sigue siendo DRYING).
+- `src/classifier.js` `substringMatch`: la key `"alcohol"` ya no matchea
+  cuando es sólo la ÚLTIMA palabra del token. Un `"<desconocido> Alcohol"`
+  cae al catálogo extendido / unknown (VERIFICAR) en vez de NO APTO falso.
+  Como primera palabra (`Alcohol Denat`, `Alcohol 96°`) sigue matcheando.
+- `service-worker.js`: CACHE_VERSION v17 → v18 para que los clientes
+  reciban el catálogo nuevo.
+
+### Archivos
+- `src/ingredients.js`, `src/classifier.js`, `service-worker.js`
+- `tests/test_classifier.mjs` (+15 tests)
+- `../clasificador/curly_classifier/ruleset.py`
+
+### Validación
+- JS: classifier 64/64 (antes 49), categories 10/10, fuzzy 14/14,
+  inci_extended 10/10, ocr_catalog OK. `node --check` OK.
+- Python: pytest 22/22; probe manual Oleyl/Lanolin/Amyl Cinnamyl/Ethyl.
+- Regresiones cubiertas: `Alcohol`, `Alcohol Denat.`, `SD Alcohol 40`,
+  `Ethyl Alcohol`, `Isopropyl Alcohol` siguen DRYING; INCI con
+  `Alcohol Denat.` + `Oleyl Alcohol` sigue NO APTO con 1 sólo ofensor.
+
+### Follow-ups / deuda
+- El Python `lookup_ingredient` usa containment puro (`key in norm`), más
+  laxo que el JS; no tiene el guard de "alcohol" ni la regla first/last-word.
+  Las entradas exactas cubren los casos conocidos, pero conviene portar
+  `substringMatch` a Python para paridad real.
+- Cambios sin commitear (no se hizo commit/deploy desde la tarea automática).
+- `probe_tmp.mjs` (script de prueba) quedó en `Método Curly/_to_delete/`
+  porque la sesión no tiene permiso de borrado — se puede borrar a mano.
+- Pendientes de FINDINGS siguientes por prioridad: P1-6 (chips "Sin
+  Siliconas" en ruleset lenient), P1-8 (estantería reclasifica con ruleset
+  hardcodeado).
+
+---
+
 ## 2026-05-08 — Parser: stripping de marcadores de anotación (asteriscos orgánicos, footnotes, %, corchetes)
 
 ### Problema

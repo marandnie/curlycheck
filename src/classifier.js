@@ -151,6 +151,12 @@ function substringMatch(norm) {
     if (key.includes(" ")) {
       if (norm.includes(key)) return ing;
     } else {
+      // "alcohol" como ÚLTIMA palabra ("Oleyl Alcohol", "Cinnamyl Alcohol")
+      // nombra un alcohol específico, casi nunca etanol: no asumir DRYING.
+      // Si no está curado, cae al catálogo extendido / unknown (VERIFICAR),
+      // que es preferible a un NO APTO falso. Como PRIMERA palabra
+      // ("Alcohol Denat", "Alcohol 96°") sí sigue matcheando.
+      if (key === "alcohol" && key !== first) continue;
       if (key === first || key === last) return ing;
     }
   }
