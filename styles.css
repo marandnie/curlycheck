@@ -753,6 +753,11 @@ pre {
   color: var(--noapto-fg);
   border-color: var(--noapto-bg);
 }
+/* Presente pero permitido por el ruleset: neutro (no verde ni rojo) */
+.cat-allowed {
+  background: white;
+  color: var(--muted);
+}
 
 /* OCR cropper */
 .ocr-crop-wrap {

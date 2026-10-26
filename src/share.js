@@ -12,7 +12,7 @@ function emojiForVerdict(v) {
 }
 
 function emojiForCategoryState(s) {
-  return s === "clean" ? "✓" : s === "present" ? "✗" : "—";
+  return s === "clean" ? "✓" : s === "present" ? "✗" : s === "allowed" ? "•" : "—";
 }
 
 function categoryLabel(key) {
@@ -50,7 +50,9 @@ export function buildShareText(item, categorySummary, opts) {
       // "others" sólo se renderiza cuando hay match (state="present");
       // su default "na" es invisible para no agregar ruido.
       if (key === "others" && s !== "present") continue;
-      lines.push(`${emojiForCategoryState(s)} ${categoryLabel(key)}`);
+      // "allowed": hay ingredientes del grupo pero el ruleset los permite.
+      const suffix = s === "allowed" ? " — permitido en este ruleset" : "";
+      lines.push(`${emojiForCategoryState(s)} ${categoryLabel(key)}${suffix}`);
     }
   }
 

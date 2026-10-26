@@ -322,15 +322,25 @@ export function categorySummary(inciText, rulesetName) {
     const matches = [];
     for (const c of cats) if (byCat[c]) matches.push.apply(matches, byCat[c]);
     const isRelevant = cats.some(function(c) { return rs.forbiddenCategories.has(c); });
-    if (!isRelevant) {
-      summary[key] = { state: matches.length > 0 ? "clean" : "na", matches: [] };
-      continue;
+    // Se evalúa cada match por SU categoría (no la del grupo): en "minerals"
+    // conviven MINERAL_OIL y WAX, y en standard/lenient las ceras no están
+    // prohibidas. Antes una Candelilla Cera daba "✗ Con Aceite mineral" con
+    // veredicto APTO, y en lenient Dimethicone daba "✓ Sin Siliconas".
+    const forbidden = [];
+    const allowed = [];
+    for (const m of matches) {
+      if (rs.forbiddenCategories.has(m.category) && !rs.extraAllowed.has(m.name)) forbidden.push(m.name);
+      else if (!allowed.includes(m.name)) allowed.push(m.name);
     }
-    const filtered = matches.filter(function(m) { return !rs.extraAllowed.has(m.name); });
-    summary[key] = {
-      state: filtered.length > 0 ? "present" : "clean",
-      matches: filtered.map(function(m) { return m.name; }),
-    };
+    if (forbidden.length > 0) {
+      summary[key] = { state: "present", matches: forbidden };
+    } else if (allowed.length > 0) {
+      // Hay ingredientes del grupo, pero este ruleset los permite: no es
+      // "Sin X" (sería falso) ni "Con X ✗" (no afecta el veredicto).
+      summary[key] = { state: "allowed", matches: allowed };
+    } else {
+      summary[key] = { state: isRelevant ? "clean" : "na", matches: [] };
+    }
   }
   // Inicializar el bucket "others" antes de distribuir extraForbidden.
   // Estado por defecto "na": sólo se renderiza si efectivamente hubo

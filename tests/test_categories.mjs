@@ -59,11 +59,42 @@ test("Masque Beurre: silicones + alcohols presentes", () => {
   }
 });
 
-// Ruleset lenient: Dimethicone NO debe aparecer como present (extraAllowed)
-test("Lenient: Dimethicone allowed → silicones clean", () => {
+// Ruleset lenient: Dimethicone NO debe aparecer como present (extraAllowed),
+// pero tampoco como "clean" ("Sin Siliconas" sería falso) → "allowed".
+test("Lenient: Dimethicone → silicones allowed (no present, no clean)", () => {
   const r = categorySummary("Aqua, Dimethicone, Cetearyl Alcohol, Glycerin, Parfum", "lenient");
-  assertEq(r.silicones.state, "clean", "Dimethicone debería estar permitido en lenient");
+  assertEq(r.silicones.state, "allowed", "Dimethicone está permitido en lenient pero presente");
+  if (!r.silicones.matches.includes("Dimethicone")) {
+    throw new Error("falta Dimethicone en silicones.matches: " + JSON.stringify(r.silicones.matches));
+  }
   assertEq(r.sulfates.state, "clean");
+});
+
+// FINDINGS P1-6: grupo no prohibido con matches → "allowed", no "clean"
+test("Lenient: Isopropyl Alcohol → alcohols allowed (no 'Sin Alcohol secante')", () => {
+  const r = categorySummary("Aqua, Isopropyl Alcohol, Glycerin", "lenient");
+  assertEq(r.alcohols.state, "allowed");
+  if (!r.alcohols.matches.includes("Isopropyl Alcohol")) {
+    throw new Error("falta Isopropyl Alcohol en alcohols.matches");
+  }
+});
+
+// Grupo mixto: en standard las ceras no están prohibidas → no "✗ Con Aceite mineral"
+test("Standard: Candelilla Cera → minerals allowed (veredicto APTO, chip no rojo)", () => {
+  const r = categorySummary("Aqua, Candelilla Cera, Glycerin", "standard");
+  assertEq(r.minerals.state, "allowed");
+});
+
+test("Standard: Mineral Oil + Candelilla → minerals present sólo con Mineral Oil", () => {
+  const r = categorySummary("Aqua, Mineral Oil, Candelilla Cera, Glycerin", "standard");
+  assertEq(r.minerals.state, "present");
+  assertEq(JSON.stringify(r.minerals.matches), JSON.stringify(["Mineral Oil"]));
+});
+
+// Standard: Dimethicone sigue siendo present
+test("Standard: Dimethicone → silicones present", () => {
+  const r = categorySummary("Aqua, Dimethicone, Glycerin", "standard");
+  assertEq(r.silicones.state, "present");
 });
 
 // Ruleset strict: WAX prohibido — Candelilla debería disparar minerals

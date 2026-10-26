@@ -5,6 +5,59 @@ Las entradas más recientes van arriba.
 
 ---
 
+## 2026-10-09 — Fix: chips de categoría mentían en rulesets permisivos (FINDINGS P1-6)
+
+### Problema
+FINDINGS P1-6, verificado ejecutando `categorySummary`:
+- **lenient** + Dimethicone → `silicones: clean` → chip **"✓ Sin Siliconas"**.
+- **lenient** + Isopropyl Alcohol → `alcohols: clean` → **"✓ Sin Alcohol secante"**.
+- Caso nuevo del mismo bug: **standard/lenient** + Candelilla Cera / Cera Alba
+  → `minerals: present` → chip rojo **"✗ Con Aceite mineral"** con veredicto
+  APTO. El grupo `minerals` junta MINERAL_OIL y WAX, y se evaluaba la
+  relevancia del GRUPO en vez de la categoría de cada ingrediente.
+
+### Implementación
+- `src/classifier.js` `categorySummary`: cada match se evalúa por su propia
+  categoría (prohibida en el ruleset y no en `extraAllowed`). Estados:
+  `present` (hay prohibidos; `matches` = sólo los prohibidos), `allowed`
+  (nuevo: hay ingredientes del grupo pero el ruleset los permite), `clean`
+  (grupo relevante sin matches) o `na`.
+- `src/app.js`: chip `allowed` neutro con icono "•" que nombra los
+  ingredientes (máx. 2 + "+N"): p.ej. "• Dimethicone (permitido en este
+  ruleset)". Se nombran los ingredientes y no la categoría para no decir
+  "Aceite mineral" cuando es una cera. Tooltip con la lista completa.
+- `src/share.js`: texto compartido "• Siliconas no solubles — permitido en
+  este ruleset".
+- `styles.css`: clase `.cat-allowed` (fondo blanco, texto `--muted`).
+- `service-worker.js`: CACHE_VERSION v18 → v19.
+- No hay equivalente de `categorySummary` en el clasificador Python: no hubo
+  que portar nada.
+
+### Archivos
+- `src/classifier.js`, `src/app.js`, `src/share.js`, `styles.css`, `service-worker.js`
+- `tests/test_categories.mjs` (el test "Lenient: Dimethicone → clean" pasó a
+  esperar `allowed`; +4 tests: Isopropyl lenient, Candelilla standard,
+  Mineral Oil + Candelilla, Dimethicone standard)
+
+### Validación
+- `node --check` OK en los 5 .js tocados.
+- classifier 64/64, categories 14/14 (antes 10), fuzzy 14/14,
+  inci_extended 10/10, ocr_catalog OK.
+- Probe manual de `buildShareText` con lenient + Dimethicone + SLS: líneas
+  "✗ Sulfatos" / "• Siliconas no solubles — permitido en este ruleset".
+- Veredictos sin cambios (sólo cambia el resumen por categoría).
+
+### Follow-ups / deuda
+- No verificado visualmente en navegador (sin build step; el cambio de UI es
+  un chip más con clase nueva). Conviene mirarlo en el celu.
+- Los nombres de ingredientes en el chip `allowed` están en INCI (inglés);
+  si se prefiere texto en castellano, se puede cambiar a
+  "Siliconas: permitidas en este ruleset" para todos los grupos menos minerals.
+- Siguientes de FINDINGS: P1-8 (estantería reclasifica con ruleset
+  hardcodeado y dos veces), P1-12 (re-escaneo bloqueado tras "← Volver").
+
+---
+
 ## 2026-10-08 — Fix: alcoholes "<algo> Alcohol" no secantes marcados como DRYING (NO APTO falso)
 
 ### Problema

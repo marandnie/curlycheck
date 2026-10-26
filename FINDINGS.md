@@ -84,7 +84,7 @@ desconocido para la lista curada, no adivinar); o exceptuar patrones `* Alcohol`
 del fallback; o sumar los alcoholes grasos faltantes (Oleyl, Arachidyl, Isostearyl, Lanolin…) como
 entradas exactas FATTY_ALCOHOL.
 
-### 6. Chips de categoría mienten en rulesets permisivos ⚠ verificado
+### 6. ~~Chips de categoría mienten en rulesets permisivos~~ ✅ RESUELTO (2026-10-09, ver DAILY_LOG)
 `src/classifier.js:224-227`: si la categoría no está prohibida por el ruleset, el estado queda
 `"clean"` aunque haya matches. Con ruleset **lenient**, un producto con Dimethicone muestra el chip
 **"✓ Sin Siliconas"** (verificado: `{"state":"clean","matches":[]}`). Es información factualmente

@@ -500,13 +500,21 @@ function renderCategoryChips(r) {
     if (!s || s.state === "na") continue;
     const chip = document.createElement("div");
     chip.className = `cat-chip cat-${s.state}`;
-    const icon = s.state === "clean" ? "✓" : s.state === "present" ? "✗" : "—";
-    const prefix = s.state === "clean" ? "Sin" : "Con";
+    const icon = s.state === "clean" ? "✓" : s.state === "present" ? "✗" : "•";
+    let label;
+    if (s.state === "allowed") {
+      // Nombramos los ingredientes en vez de la categoría: en "minerals"
+      // pueden ser ceras, y "Con Aceite mineral" sería engañoso.
+      const names = s.matches.slice(0, 2).join(", ") + (s.matches.length > 2 ? ` +${s.matches.length - 2}` : "");
+      label = `${escape(names)} (permitido en este ruleset)`;
+    } else {
+      label = `${s.state === "clean" ? "Sin" : "Con"} ${escape(CAT_LABELS[key])}`;
+    }
     chip.innerHTML = `
       <span class="cat-chip-icon">${icon}</span>
-      <span class="cat-chip-label">${prefix} ${escape(CAT_LABELS[key])}</span>
+      <span class="cat-chip-label">${label}</span>
     `;
-    if (s.state === "present" && s.matches.length) {
+    if ((s.state === "present" || s.state === "allowed") && s.matches.length) {
       chip.title = s.matches.join(", ");
     }
     block.appendChild(chip);
